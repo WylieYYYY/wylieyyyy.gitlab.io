@@ -1,0 +1,26 @@
+{
+  "name": "wylieyyyy.gitlab.io",
+  "version": "0.0.0",
+  "description": "Personal website.",
+  "scripts": {
+    "test": "node node_modules/eslint/bin/eslint.js *.js public/*.js --ignore-path .gitignore",
+    "build": "node setup.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitlab.com/WylieYYYY/wylieyyyy.gitlab.io.git"
+  },
+  "author": "WylieYYYY",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://gitlab.com/WylieYYYY/wylieyyyy.gitlab.io/issues"
+  },
+  "homepage": "https://gitlab.com/WylieYYYY/wylieyyyy.gitlab.io#readme",
+  "dependencies": {
+    "axios": "^0.19.2"
+  },
+  "devDependencies": {
+    "eslint": "^7.5.0",
+    "eslint-config-google": "^0.14.0"
+  }
+}

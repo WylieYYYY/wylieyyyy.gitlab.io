@@ -1,0 +1,16 @@
+env:
+  browser: true
+extends:
+  - eslint:recommended
+  - google
+parserOptions:
+  ecmaVersion: 6
+  sourceType: script
+overrides:
+  -
+    files:
+      - setup.js
+    env:
+      browser: false
+      es6: true
+      node: true

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="theme-color" content="#40e0d0">
+    <title>WylieYYYY's Projects</title>
+    <link rel="shortcut icon" type="image/png" href="styles/smiley.svg"/>
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"/>
+    <script src="projects.js" defer></script>
+    <style type="text/css">
+      a {
+        color: #20c997;
+      }
+      pre code {
+        color: #e83e8c;
+      }
+      .fade-leave-active {
+        transition: opacity 0.5s;
+      }
+      .fade-leave-to {
+        opacity: 0;
+      }
+      .dropped::after {
+        -webkit-transform: rotate(180deg);
+        transform: rotate(180deg);
+      }
+      .custom-alert {
+        margin: 1em;
+        opacity: 80%;
+      }
+    </style>
+  </head>
+  <!-- Background pattern from Toptal Subtle Patterns -->
+  <body style="background-image: url('styles/dark-honeycomb.png');">
+    <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
+      <a class="navbar-brand"><img src="styles/logo.png" style="max-height: 2rem;"/></a>
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item active">
+          <a class="nav-link" href="#">Projects <span class="sr-only">(current)</span></a>
+        </li>
+      </ul>
+    </nav>
+    <main id="app">
+      <div style="position: absolute; width: 100%;">
+        <div v-for="error in errors" class="alert alert-danger alert-dismissible container custom-alert"
+            role="alert">
+          {{error}}
+          <button @click="errors.splice(errors.indexOf(error), 1)" type="button" class="close"
+              style="float: right;" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+      </div>
+      <div class="jumbotron text-light bg-dark m-3">
+        <h1 class="display-4">Projects</h1>
+        <p class="lead">
+          Projects' information below is updated dynamically via Gitlab's API and
+          is guaranteed to be up-to-date.
+        </p>
+      </div>
+      <div class="text-light d-flex flex-wrap justify-content-around">
+        <div v-for="project in response" :key="project.name" class="card m-3"
+            style="display: none;" :style="'width: 20rem; height: 35rem; display: flex;'">
+          <img v-if="screenshot[project.id]" class="card-img-top bg-dark"
+              :src="screenshot[project.id]" :alt="project.name + '\'s Screenshot'"
+              :title="project.name + '\'s Screenshot'"
+              style="width: auto; height: 15rem; object-fit: cover;"/>
+          <transition name="fade">
+            <div v-if="!screenshot[project.id]"
+                class="bg-dark d-flex justify-content-center align-items-center"
+                style="width: 100%; height: 15rem; position: absolute; transition-delay: 2s;">
+              <div class="spinner-border text-primary bg-dark" role="status">
+                <span class="sr-only">Loading...</span>
+              </div>
+            </div>
+          </transition>
+          <div class="card-body bg-dark">
+            <h2 class="card-title">
+              <a :href="project.http_url_to_repo">
+                {{project.name}} <img src="styles/repo.svg"/>
+              </a>
+              <h4>{{version[project.id]}}</h4>
+            </h2>
+            <div>
+              <span v-for="name in badges[project.id]" class="badge mr-2 text-light"
+                  :style="badgeStyles[name]">
+                {{removeAllCaps(name)}}
+              </span>
+            </div>
+            <p class="card-text">{{project.description || 'No description available.'}}</p>
+            <button v-if="readMe[project.id]" @click="showDetailModal(project.id)" class="btn btn-primary"
+                type="button" style="position: absolute; bottom: 1rem; left: 1rem;" aria-haspopup="true"
+                aria-expanded="false">
+              Learn more
+            </button>
+            <ul v-if="license[project.id] && latestCreated[project.id]" class="list-group"
+                style="position: absolute; bottom: 1rem; right: 1rem;">
+              <li title="Project License"
+                  class="d-flex align-items-center list-group-item bg-dark border-info p-1">
+                <img src="styles/law.svg"/>&nbsp;
+                <a @click.prevent="showLicenseModal(project.id)" href="#" aria-haspopup="true"
+                    aria-expanded="false">
+                  {{license[project.id]}}
+                </a>
+              </li>
+              <li title="Latest Release On"
+                  class="d-flex align-items-center list-group-item bg-dark border-info p-1">
+                <img src="styles/history.svg"/>&nbsp;{{latestCreated[project.id].substring(0, 10)}}
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div v-if="modal.title !== null" class="modal-backdrop" style="opacity: 0.5;"></div>
+        <div v-if="modal.title !== null" @click="dropDownTrigger = !dropDownTrigger"
+            class="modal" tabindex="-1" role="dialog"
+            aria-labelledby="modaltitle" aria-hidden="true" style="display: block;">
+          <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content bg-dark">
+              <div class="modal-header">
+                <h5 id="modaltitle" class="modal-title" v-show="modal.title" style="display: none;">
+                  {{modal.title}}
+                </h5>
+                <h5 v-if="false" class="modal-title">Unsupported Browser</h5>
+                <button @click="hideModal()" type="button"
+                    class="close text-light" aria-label="Close" v-show="true"
+                    style="display: none;" aria-hidden="true">
+                  &times;
+                </button>
+              </div>
+              <div class="modal-body" @scroll="dropDownTrigger = !dropDownTrigger">
+                <p v-html="modal.body"></p>
+                <div v-show="modal.body === null" class="justify-content-center align-items-center"
+                    style="display: none;" :style="'width: 100%; display: flex;'">
+                  <div class="spinner-border text-primary" role="status">
+                    <span class="sr-only">Loading...</span>
+                  </div>
+                </div>
+                <p v-if="false">
+                  You are using a legacy browser or Javascript is disabled. Please
+                  upgrade your browser or enable Javascript to proceed. You can also
+                  view projects in my Gitlab repository.
+                </p>
+              </div>
+              <div class="modal-footer" style="justify-content: space-between;"
+                  :style="modal.dropDown === null ? 'justify-content: none;' :
+                  'justify-content: space-between;'">
+                <drop-menu v-if="modal.dropDown !== null" type="dropup" :title="modal.dropDown[0]"
+                    style="display: none;" :style="'display: block;'" :items="modal.dropDown[1]"
+                    :close-trigger="dropDownTrigger">
+                </drop-menu>
+                <a href="https://gitlab.com/users/WylieYYYY/projects" v-if="false">
+                  View in my repository <img src="styles/link-external.svg"/>
+                </a>
+                <button @click="hideModal()" type="button"
+                    class="btn btn-secondary" v-show="true" style="display: none;">
+                  Close
+                </button>
+                <a href="." class="btn btn-warning" v-if="false">Return to home page</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer class="mt-auto py-3 bg-dark">
+      <div class="container text-muted">
+        Hand crafted with <img src="styles/heart-fill.svg" alt="love"/> by Wylie.
+      </div>
+    </footer>
+  </body>
+</html>

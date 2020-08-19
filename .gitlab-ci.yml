@@ -1,0 +1,22 @@
+image: node:alpine
+
+stages:
+    - lint
+    - build
+
+eslint:
+    stage: lint
+    script:
+        - npm i
+        - npm test
+
+pages:
+    stage: build
+    script:
+        - npm i
+        - npm run build
+    artifacts:
+        paths:
+            - public
+    only:
+        - master
