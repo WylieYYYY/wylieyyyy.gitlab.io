@@ -13,7 +13,7 @@ const builds = function() {
   return new Set();
 }();
 
-let lastDeployAt;
+let lastDeployAt = '';
 
 /**
  * Checks for artifact in a successful master pipeline, update
@@ -97,6 +97,11 @@ function checkLastDeployTime(projects) {
   const project = projects.filter((project) => {
     return project.path === 'wylieyyyy.gitlab.io';
   })[0];
+  if (project === undefined) {
+    console.log('No prior deployment, starting from scratch.');
+    for (const project of projects) checkReleased(project);
+    return;
+  }
   axios.get('https://gitlab.com/api/v4/projects/' + project.id + '/pipelines')
       .then((response) => {
         const masterPipelines = response.data.filter((pipeline) => {
@@ -104,9 +109,8 @@ function checkLastDeployTime(projects) {
         });
         if (masterPipelines.length === 0) {
           console.log('No prior successful deployment, starting from scratch.');
-          lastDeployAt = '';
         } else {
-          console.log('Last Deployment was at ' +
+          console.log('Last deployment was at ' +
               masterPipelines[0].updated_at + '.');
           lastDeployAt = masterPipelines[0].updated_at;
         }
