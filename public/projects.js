@@ -25,7 +25,8 @@ Vue.component('drop-menu', {
       </button>
       <div v-if="opened" class="dropdown-menu" style="display: block;">
         <a v-for="record in items" :href="record.href"
-            :download="record.fileName === undefined ? '' : record.fileName"
+            :download="record.fileName === undefined ?
+            'donwload' : record.fileName"
             class="dropdown-item">
           {{record.name}}
         </a>
@@ -190,9 +191,10 @@ const vm = new Vue({
      * update releases' dropup on the way.
      * @param {object} vm - The Vue instance.
      * @param {object} project - Project overview object returned by Gitlab API.
+     * @return {object} A promise that returns true if there are no releases.
      */
     function updateVersions(vm, project) {
-      axios.get('https://gitlab.com/api/v4/projects/' + project.id +
+      return axios.get('https://gitlab.com/api/v4/projects/' + project.id +
           '/releases')
           .then((response) => {
             if (response.data.length === 0) {
@@ -223,13 +225,16 @@ const vm = new Vue({
                         return asset.link_type === 'package';
                       });
                       packageMap[release.tag_name] = pack.url;
-                      if (Object.values(packageMap).indexOf(undefined) === -1) {
-                        Vue.set(vm.downloadLinks, project.id, ['Releases',
+                      if (Object.values(packageMap)
+                          .indexOf(undefined) === -1) {
+                        Vue.set(vm.downloadLinks, project.id, [
+                          'Download Release',
                           Object.keys(packageMap).map((tagName) => {
+                            const format = packageMap[tagName]
+                                .match(/.*\/.*?(\..*)/)[1];
                             return {
                               href: packageMap[tagName],
-                              name: tagName + ' (' + packageMap[tagName]
-                                  .match(/.*\/.*?(\..*)/)[1] + ')',
+                              name: tagName + ' (' + format + ')',
                             };
                           }).filter((x) => x !== undefined),
                         ]);
@@ -241,6 +246,7 @@ const vm = new Vue({
                     });
               });
             }
+            return response.data.length === 0;
           })
           .catch((error) => {
             vm.errors = vm.errors.concat('Failed to fetch release detail' +
@@ -292,12 +298,28 @@ const vm = new Vue({
           .then((response) => {
             vm.lastUpdated = response.data.lastUpdated;
             for (const project of projects) {
-              if (response.data.indexOf(project.id) === -1) continue;
-              Vue.set(vm.downloadLinks, project.id, ['Download Build', [{
-                href: project.id + '.zip',
-                fileName: project.name + ' Latest.zip',
-                name: 'Latest (.zip)',
-              }]]);
+              updateVersions(vm, project).then((hasNoReleases) => {
+                if (response.data.indexOf(project.id) === -1) {
+                  if (hasNoReleases) {
+                    Vue.set(vm.downloadLinks, project.id, ['Download Source',
+                      ['.zip', '.tar.gz', '.tar.bz2', '.tar']
+                          .map((format) => {
+                            return {
+                              href: `${project.web_url}/-/archive/master/` +
+                                  `${project.path}-master${format}`,
+                              name: 'Master (' + format + ')',
+                            };
+                          }),
+                    ]);
+                  }
+                  return;
+                }
+                Vue.set(vm.downloadLinks, project.id, ['Download Build', [{
+                  href: project.id + '.zip',
+                  fileName: project.path + '-build.zip',
+                  name: 'Latest (.zip)',
+                }]]);
+              });
             }
           })
           .catch((error) => {
@@ -310,13 +332,12 @@ const vm = new Vue({
         .then((response) => {
           this.response = response.data;
           this.keyword.push(...response.data.map((x) => x.name));
+          updateJobBuild(this, response.data);
           for (const project of response.data) {
             updateScreenshots(this, project);
-            updateVersions(this, project);
             updateSetupsbadges(this, project);
             updateLicense(this, project);
           }
-          updateJobBuild(this, response.data);
         })
         .catch((error) => {
           vm.errors = vm.errors.concat('Failed to fetch project detail.');
