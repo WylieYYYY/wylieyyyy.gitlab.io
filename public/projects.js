@@ -63,10 +63,12 @@ const vm = new Vue({
     latestCreated: {},
     license: {},
     licenseBody: {},
+    projectHasDemo: {},
     modal: {
       title: null,
       dropDown: null,
       body: null,
+      hasDemo: false,
     },
     dropDownTrigger: false,
     downloadLinks: {},
@@ -125,6 +127,17 @@ const vm = new Vue({
               '/repository/files/$2/raw?ref=master$3'))
           .replace(/(<img)(.*?src="(.*?)".*?>)/g, '<a href="$3">$1 ' +
               'style="max-width: 25rem; height: auto;" $2</a>'));
+      if (this.projectHasDemo[id] === undefined) {
+        const projectPath = this.response.filter((project) => {
+          return project.id === id;
+        })[0].path;
+        axios.head(projectPath)
+            .then((response) => {
+              this.projectHasDemo[id] = projectPath;
+              Vue.set(this.modal, 'hasDemo', projectPath);
+            })
+            .catch((error) => this.projectHasDemo[id] = false);
+      } else Vue.set(this.modal, 'hasDemo', this.projectHasDemo[id]);
     },
     /**
      * Requests and shows project's license in the modal box.
@@ -154,6 +167,7 @@ const vm = new Vue({
     hideModal: function() {
       Vue.set(this.modal, 'title', null);
       Vue.set(this.modal, 'dropDown', null);
+      Vue.set(this.modal, 'hasDemo', false);
       Vue.set(this.modal, 'body', null);
     },
   },

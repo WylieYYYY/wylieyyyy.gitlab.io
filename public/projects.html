@@ -82,7 +82,7 @@
               <a :href="project.http_url_to_repo">
                 {{project.name}} <img src="styles/repo.svg"/>
               </a>
-              <h4>{{version[project.id]}}</h4>
+              <h4 title="Version">{{version[project.id]}}</h4>
             </h2>
             <div>
               <span v-for="name in badges[project.id]" class="badge mr-2 text-light"
@@ -154,10 +154,16 @@
                 <a href="https://gitlab.com/users/WylieYYYY/projects" v-if="false">
                   View in my repository <img src="styles/link-external.svg"/>
                 </a>
-                <button @click="hideModal()" type="button"
-                    class="btn btn-secondary" v-show="true" style="display: none;">
-                  Close
-                </button>
+                <div>
+                  <a :href="modal.hasDemo" class="btn btn-info"
+                      v-show="modal.hasDemo" style="display: none;">
+                    Project Demo
+                  </a>
+                  <button @click="hideModal()" type="button"
+                      class="btn btn-secondary" v-show="true" style="display: none;">
+                    Close
+                  </button>
+                </div>
                 <a href="." class="btn btn-warning" v-if="false">Return to home page</a>
               </div>
             </div>
