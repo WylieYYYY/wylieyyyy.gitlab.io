@@ -68,7 +68,7 @@ const vm = new Vue({
       title: null,
       dropDown: null,
       body: null,
-      hasDemo: false,
+      hasDemo: undefined,
     },
     dropDownTrigger: false,
     downloadLinks: {},
@@ -136,7 +136,10 @@ const vm = new Vue({
               this.projectHasDemo[id] = projectPath;
               Vue.set(this.modal, 'hasDemo', projectPath);
             })
-            .catch((error) => this.projectHasDemo[id] = false);
+            .catch((error) => {
+              this.projectHasDemo[id] = false;
+              Vue.set(this.modal, 'hasDemo', false);
+            });
       } else Vue.set(this.modal, 'hasDemo', this.projectHasDemo[id]);
     },
     /**
@@ -167,7 +170,7 @@ const vm = new Vue({
     hideModal: function() {
       Vue.set(this.modal, 'title', null);
       Vue.set(this.modal, 'dropDown', null);
-      Vue.set(this.modal, 'hasDemo', false);
+      Vue.set(this.modal, 'hasDemo', undefined);
       Vue.set(this.modal, 'body', null);
     },
   },

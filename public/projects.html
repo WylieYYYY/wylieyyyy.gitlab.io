@@ -45,8 +45,9 @@
     </nav>
     <main id="app">
       <div style="position: absolute; width: 100%;">
-        <div v-for="error in errors" class="alert alert-danger alert-dismissible container custom-alert"
-            role="alert">
+        <div v-for="error in errors" v-show="true"
+            class="alert alert-danger alert-dismissible container custom-alert"
+            style="display: none;" role="alert">
           {{error}}
           <button @click="errors.splice(errors.indexOf(error), 1)" type="button" class="close"
               style="float: right;" data-dismiss="alert" aria-label="Close">
@@ -154,7 +155,14 @@
                 <a href="https://gitlab.com/users/WylieYYYY/projects" v-if="false">
                   View in my repository <img src="styles/link-external.svg"/>
                 </a>
-                <div>
+                <div class="align-items-center"
+                    :style="modal.hasDemo === undefined ? 'display: flex;' : 'display: block;'">
+                  <span v-show="modal.hasDemo === undefined" style="display: none;"
+                      :style="'margin-right: 1em; display: inline;'">
+                    <div class="spinner-border text-info" role="status">
+                      <span class="sr-only">Loading...</span>
+                    </div>
+                  </span>
                   <a :href="modal.hasDemo" class="btn btn-info"
                       v-show="modal.hasDemo" style="display: none;">
                     Project Demo
