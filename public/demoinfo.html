@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="theme-color" content="#40e0d0">
+    <title>Demonstration Info</title>
+    <link rel="shortcut icon" type="image/png" href="styles/smiley.svg"/>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"/>
+    <style>
+      a {
+        color: #20c997;
+      }
+      code {
+        color: #e83e8c;
+      }
+    </style>
+  </head>
+  <!-- Background pattern from Toptal Subtle Patterns -->
+  <body class="text-light" style="background-image: url('styles/dark-honeycomb.png');">
+    <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
+      <a class="navbar-brand"><img src="styles/logo.png" style="max-height: 2rem;"/></a>
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item">
+          <a class="nav-link" href="projects.html">Projects</a>
+        </li>
+        <li class="nav-item active">
+          <a class="nav-link" href="#">Demo Info <span class="sr-only">(current)</span></a>
+        </li>
+      </ul>
+    </nav>
+    <div class="jumbotron text-light bg-dark m-3 py-4">
+      <h3>Demonstration Information</h3>
+      <h4>Where does my data go to when I am using the demos?</h4>
+      <ul>
+        <li>
+          All data are stored on the browser temporarily, they will be cleared when your browser is closed.
+        </li>
+        <li>
+          As this is a static site, hosted by
+          <a href="https://about.gitlab.com/stages-devops-lifecycle/pages/">Gitlab Pages</a>,
+          no data can be stored on the server.
+        </li>
+        <li>
+          Some APIs does not accept brower requests, and so
+          <a href="https://cors-anywhere.herokuapp.com/">CORS-Anywhere</a>
+          service is used sometimes.
+        </li>
+        <li>Additional usage can be viewed on individual project's README.</li>
+      </ul>
+      <p>If you do not wish to send your data:</p>
+      <ul>
+        <li>to my website for processing, download to use the individual project.</li>
+        <li>
+          through CORS-Anywhere usage, please download the project
+          and host it with a local server, or executing it offline if possible.
+        </li>
+        <li>
+          to any other parties stated on the project's README,
+          please do not use the demo or project.
+        </li>
+      </ul>
+      <h4>How can I protect my data when I am using the demos?</h4>
+      <ol>
+        <li>Using a disposable rate-limited API key.</li>
+        <li>Avoid using sensitive data on the site.</li>
+      </ol>
+      <h4>How do these demos work?</h4>
+      <div>
+        Most projects are minimally patched to work on this static site,
+        Getinfo CSharp also uses <a href="https://blazor.net/">Blazor.NET</a>
+        as a compatibility layer.
+      </div>
+    </div>
+    <footer class="mt-auto py-3 bg-dark">
+      <div class="container text-muted">
+        Hand crafted with <img src="styles/heart-fill.svg" alt="love"/> by Wylie.
+      </div>
+    </footer>
+  </body>
+</html>
