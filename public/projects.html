@@ -62,8 +62,7 @@
         <h1 class="display-4">Projects</h1>
         <p class="lead">
           Projects' information below is updated dynamically via Gitlab's API and
-          is guaranteed to be up-to-date. Some projects have online demo available 
-          in the 'Learn More' section.
+          is guaranteed to be up-to-date. Online demos can be accessed by clicking the badges.
         </p>
       </div>
       <div class="text-light d-flex flex-wrap justify-content-around">
@@ -87,8 +86,13 @@
               <a :href="project.http_url_to_repo">
                 {{project.name}} <img src="styles/repo.svg"/>
               </a>
-              <h4 title="Version">{{version[project.id]}}</h4>
             </h2>
+            <h4 title="Version" style="display: inline;">{{version[project.id]}}</h4>
+            <a :href="projectHasDemo[project.id] ? project.path : '#'">
+              <img :src="'https://img.shields.io/badge/' + (projectHasDemo[project.id] ?
+                  'demo-click_here-informational' : 'demo-none_yet-inactive')" style="float: right;"
+                  :alt="'Demo link ' + (projectHasDemo[project.id] ? '' : 'un') + 'available'"/>
+            </a>
             <div>
               <span v-for="name in badges[project.id]" class="badge mr-2 text-light"
                   :style="badgeStyles[name]">
@@ -159,23 +163,10 @@
                 <a href="https://gitlab.com/users/WylieYYYY/projects" v-if="false">
                   View in my repository <img src="styles/link-external.svg"/>
                 </a>
-                <div class="align-items-center"
-                    :style="modal.hasDemo === undefined ? 'display: flex;' : 'display: block;'">
-                  <span v-show="modal.hasDemo === undefined" style="display: none;"
-                      :style="'margin-right: 1em; display: inline;'">
-                    <div class="spinner-border text-info" role="status">
-                      <span class="sr-only">Loading...</span>
-                    </div>
-                  </span>
-                  <a :href="modal.hasDemo" class="btn btn-info"
-                      v-show="modal.hasDemo" style="display: none;">
-                    Project Demo
-                  </a>
-                  <button @click="hideModal()" type="button"
-                      class="btn btn-secondary" v-show="true" style="display: none;">
-                    Close
-                  </button>
-                </div>
+                <button @click="hideModal()" type="button"
+                    class="btn btn-secondary" v-show="true" style="display: none;">
+                  Close
+                </button>
                 <a href="." class="btn btn-warning" v-if="false">Return to home page</a>
               </div>
             </div>
