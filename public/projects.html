@@ -88,7 +88,8 @@
               </a>
             </h2>
             <h4 title="Version" style="display: inline;">{{version[project.id]}}</h4>
-            <a :href="projectHasDemo[project.id] ? project.path : '#'">
+            <a :href="projectHasDemo[project.id] ? project.path : '#'"
+                @click="projectHasDemo[project.id] ? '' : event.preventDefault()">
               <img :src="'https://img.shields.io/badge/' + (projectHasDemo[project.id] ?
                   'demo-click_here-informational' : 'demo-none_yet-inactive')" style="float: right;"
                   :alt="'Demo link ' + (projectHasDemo[project.id] ? '' : 'un') + 'available'"/>
