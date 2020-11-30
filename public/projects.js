@@ -37,23 +37,6 @@ Vue.component('drop-menu', {
 const vm = new Vue({
   el: '#app',
   data: {
-    keyword: [
-      '.NET Core',
-      'Apache',
-      'API',
-      'C',
-      'CSharp',
-      'CSV',
-      'GTK',
-      'JSON',
-      'Legacy',
-      'PHP',
-      'Python',
-      'Shell',
-      'SQLite',
-      'VTE',
-      'XML',
-    ],
     badges: {},
     response: null,
     screenshot: {},
@@ -72,7 +55,6 @@ const vm = new Vue({
     },
     dropDownTrigger: false,
     downloadLinks: {},
-    lastUpdated: null,
     errors: [],
   },
   computed: {
@@ -82,8 +64,9 @@ const vm = new Vue({
      */
     badgeStyles: function() {
       const badgeStyles = {};
-      for (let i = 0; i < this.keyword.length; i++) {
-        const value = this.keyword[i];
+      const keyword = Object.values(this.badges).flat();
+      for (let i = 0; i < keyword.length; i++) {
+        const value = keyword[i];
         let hash = 2166136261;
         for (let i = 0; i < value.length; i++) {
           hash ^= value.charCodeAt(i);
@@ -121,12 +104,25 @@ const vm = new Vue({
       if (this.downloadLinks[id] !== undefined) {
         Vue.set(this.modal, 'dropDown', this.downloadLinks[id]);
       }
-      Vue.set(this.modal, 'body', this.md.render(this.readMe[id]
-          .replace(/(\[.*?]\()(?!https:\/\/)(.*?)( .*?\))/g,
-              '$1https://gitlab.com/api/v4/projects/' + id +
-              '/repository/files/$2/raw?ref=master$3'))
-          .replace(/(<img)(.*?src="(.*?)".*?>)/g, '<a href="$3">$1 ' +
-              'style="max-width: 25rem; height: auto;" $2</a>'));
+      if (typeof this.readMe[id] === 'string') {
+        Vue.set(this.modal, 'body', this.readMe[id]);
+        return;
+      }
+      axios.get('https://gitlab.com/api/v4/projects/' + id +
+          '/repository/files/README.md/raw?ref=master')
+          .then((response) => {
+            this.readMe[id] = this.md.render(response.data
+                .replace(/(\[.*?]\()(?!https:\/\/)(.*?)( .*?\))/g,
+                    '$1https://gitlab.com/api/v4/projects/' + id +
+                    '/repository/files/$2/raw?ref=master$3'))
+                .replace(/(<img)(.*?src="(.*?)".*?>)/g, '<a href="$3">$1 ' +
+                    'style="max-width: 25rem; height: auto;" $2</a>');
+            Vue.set(this.modal, 'body', this.readMe[id]);
+          })
+          .catch((error) => {
+            vm.errors = vm.errors.concat('Failed to fetch README' +
+                ` for project ${id}.`);
+          });
     },
     /**
      * Requests and shows project's license in the modal box.
@@ -155,9 +151,9 @@ const vm = new Vue({
     /** Resets attributes of modal box, also hides it. */
     hideModal: function() {
       Vue.set(this.modal, 'title', null);
-      Vue.set(this.modal, 'dropDown', null);
-      Vue.set(this.modal, 'hasDemo', undefined);
-      Vue.set(this.modal, 'body', null);
+      this.modal.dropDown = null;
+      this.modal.hasDemo = undefined;
+      this.modal.body = null;
     },
   },
   created: function() {
@@ -257,24 +253,6 @@ const vm = new Vue({
           });
     }
     /**
-     * Requests and filters relevant keywords for badges.
-     * @param {object} vm - The Vue instance.
-     * @param {object} project - Project overview object returned by Gitlab API.
-     */
-    function updateSetupsbadges(vm, project) {
-      axios.get('https://gitlab.com/api/v4/projects/' + project.id +
-          '/repository/files/README.md/raw?ref=master')
-          .then((response) => {
-            Vue.set(vm.readMe, project.id, response.data);
-            Vue.set(vm.badges, project.id, vm.keyword.filter((value) => {
-              // ignore word that starts with '-' as it may be a command flag
-              const langRegex = new RegExp('(^|[^a-z-])' +
-                  value + '([^a-z]|$)', 'i');
-              return langRegex.test(response.data) && value !== project.name;
-            }));
-          });
-    }
-    /**
      * Requests license name for each project.
      * @param {object} vm - The Vue instance.
      * @param {object} project - Project overview object returned by Gitlab API.
@@ -299,10 +277,10 @@ const vm = new Vue({
     function updateJobBuild(vm, projects) {
       axios.get('builds.json')
           .then((response) => {
-            vm.lastUpdated = response.data.lastUpdated;
+            vm.badges = response.data.badges;
             for (const project of projects) {
               updateVersions(vm, project).then((hasNoReleases) => {
-                if (response.data.indexOf(project.id) === -1) {
+                if (response.data.artifacts.indexOf(project.id) === -1) {
                   if (hasNoReleases) {
                     Vue.set(vm.downloadLinks, project.id, ['Download Source',
                       ['.zip', '.tar.gz', '.tar.bz2', '.tar']
@@ -344,12 +322,11 @@ const vm = new Vue({
         'order_by=path&sort=asc')
         .then((response) => {
           this.response = response.data;
-          this.keyword.push(...response.data.map((x) => x.name));
           updateJobBuild(this, response.data);
           for (const project of response.data) {
+            vm.readMe[project.id] = project.readme_url !== null;
             updateScreenshots(this, project);
             updateDemoState(this, project);
-            updateSetupsbadges(this, project);
             updateLicense(this, project);
           }
         })

@@ -3,17 +3,65 @@
 const axios = require('axios');
 const fs = require('fs');
 
+const keyword = [
+  '.NET Core',
+  'Apache',
+  'API',
+  'C',
+  'CSharp',
+  'CSV',
+  'GTK',
+  'JSON',
+  'Legacy',
+  'PHP',
+  'Python',
+  'Shell',
+  'SQLite',
+  'VTE',
+  'XML',
+];
+
 const publicDir = __dirname + '/public';
 
-const builds = function() {
-  if (fs.existsSync(publicDir + '/builds.json')) {
-    return new Set(JSON.parse(
-        fs.readFileSync(publicDir + '/builds.json')));
-  }
-  return new Set();
-}();
-
+const builds = new Set();
 let lastDeployAt = '';
+
+const buildsComplex = {
+  artifacts: [],
+  badges: {},
+};
+let projectsResponse;
+let pendingCount;
+
+/** Called when all artifacts are fetched,  */
+function fetchBadges() {
+  console.log('Prefetching all badges.');
+  pendingCount = projectsResponse.length;
+  for (const project of projectsResponse) {
+    axios.get('https://gitlab.com/api/v4/projects/' + project.id +
+        '/repository/files/README.md/raw?ref=master')
+        .then((response) => {
+          console.log(`Got badges for ${project.name}.`);
+          buildsComplex.badges[project.id] = keyword.filter((value) => {
+            // ignore word that starts with '-' as it may be a command flag
+            const langRegex = new RegExp(`(^|[^a-z-])${value}([^a-z]|$)`, 'i');
+            return langRegex.test(response.data) && value !== project.name;
+          });
+          if (--pendingCount === 0) dumpFile();
+        })
+        .catch((error) => {
+          console.log(`No README for ${project.name}.`);
+          if (--pendingCount === 0) dumpFile();
+        });
+  }
+}
+
+/** Flushes all results to builds.json. **/
+function dumpFile() {
+  buildsComplex.artifacts = [...builds];
+  console.log('Dumping results to file.');
+  fs.writeFileSync(publicDir + '/builds.json', JSON.stringify(buildsComplex));
+}
 
 /**
  * Checks for artifact in a successful master pipeline, update
@@ -21,13 +69,14 @@ let lastDeployAt = '';
  * @param {object} project - Project overview object returned by Gitlab API.
  */
 function checkArtifact(project) {
-  axios.get('https://gitlab.com/api/v4/projects/' + project.id + '/pipelines')
+  axios.get(`https://gitlab.com/api/v4/projects/${project.id}/pipelines`)
       .then((response) => {
         const masterPipelines = response.data.filter((pipeline) => {
           return pipeline.ref === 'master' && pipeline.status === 'success';
         });
         if (masterPipelines.length === 0) {
-          console.log('No pipelines found for ' + project.name + ', skipping.');
+          console.log(`No pipelines found for ${project.name}, skipping.`);
+          if (--pendingCount === 0) fetchBadges();
           return;
         }
         if (masterPipelines[0].updated_at < lastDeployAt) {
@@ -40,12 +89,12 @@ function checkArtifact(project) {
                 response.data.pipe(fs.createWriteStream(publicDir + '/' +
                     project.id + '.zip'));
                 console.log('Got hosted artifact for ' + project.name + '.');
-                fs.writeFileSync(publicDir + '/builds.json',
-                    JSON.stringify([...builds.add(project.id)]));
+                builds.add(project.id);
+                if (--pendingCount === 0) fetchBadges();
               })
               .catch((error) => {
-                console.log('No hosted build artifact for ' +
-                    project.name + '.');
+                console.log(`No hosted build artifact for ${project.name}.`);
+                if (--pendingCount === 0) fetchBadges();
               });
           return;
         }
@@ -57,16 +106,17 @@ function checkArtifact(project) {
             .then((response) => {
               response.data.pipe(fs.createWriteStream(publicDir + '/' +
                   project.id + '.zip'));
-              console.log('Got build artifact for ' + project.name + '.');
-              fs.writeFileSync(publicDir + '/builds.json',
-                  JSON.stringify([...builds.add(project.id)]));
+              console.log(`Got build artifact for ${project.name}.`);
+              builds.add(project.id);
+              if (--pendingCount === 0) fetchBadges();
             })
             .catch((error) => {
-              console.log('No build artifact for ' + project.name + '.');
+              console.log(`No build artifact for ${project.name}.`);
+              if (--pendingCount === 0) fetchBadges();
             });
       })
       .catch((error) => {
-        console.error('Cannot get pipeline for ' + project.name + '.');
+        console.error(`Cannot get pipeline for ${project.name}.`);
         process.exitCode = 1;
       });
 }
@@ -77,13 +127,16 @@ function checkArtifact(project) {
  * @param {object} project - Project overview object returned by Gitlab API.
  */
 function checkReleased(project) {
-  axios.get('https://gitlab.com/api/v4/projects/' + project.id + '/releases')
+  axios.get(`https://gitlab.com/api/v4/projects/${project.id}/releases`)
       .then((response) => {
         if (response.data.length === 0) checkArtifact(project);
-        else console.log(project.name + ' has releases, skipping.');
+        else {
+          console.log(project.name + ' has releases, skipping.');
+          if (--pendingCount === 0) fetchBadges();
+        }
       })
       .catch((error) => {
-        console.error('Cannot get release for ' + project.name + '.');
+        console.error(`Cannot get release for ${project.name}.`);
         process.exitCode = 1;
       });
 }
@@ -102,7 +155,7 @@ function checkLastDeployTime(projects) {
     for (const project of projects) checkReleased(project);
     return;
   }
-  axios.get('https://gitlab.com/api/v4/projects/' + project.id + '/pipelines')
+  axios.get(`https://gitlab.com/api/v4/projects/${project.id}/pipelines`)
       .then((response) => {
         const masterPipelines = response.data.filter((pipeline) => {
           return pipeline.ref === 'master' && pipeline.status === 'success';
@@ -125,6 +178,9 @@ function checkLastDeployTime(projects) {
 axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
     'order_by=path&sort=asc')
     .then((response) => {
+      keyword.push(...response.data.map((x) => x.name));
+      projectsResponse = response.data;
+      pendingCount = response.data.length;
       checkLastDeployTime(response.data);
     })
     .catch((error) => {
