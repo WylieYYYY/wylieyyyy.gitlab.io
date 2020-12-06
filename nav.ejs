@@ -1,0 +1,21 @@
+<%
+  const pagePairs = {
+    'Projects': 'projects.html',
+    'Demo Info': 'demoinfo.html',
+  }
+%>
+<nav class="navbar navbar-expand-sm navbar-dark bg-dark">
+  <a class="navbar-brand"><img src="styles/logo.png" style="max-height: 2rem;"/></a>
+  <ul class="navbar-nav mr-auto">
+    <% for (const [name, path] of Object.entries(pagePairs)) { -%>
+      <% if (current === path) { -%>
+        <li class="nav-item active">
+          <a class="nav-link" href="#"><%= name %> <span class="sr-only">(current)</span></a>
+      <% } else { -%>
+        <li class="nav-item">
+          <a class="nav-link" href="<%= path %>"><%= name %></a>
+      <% } -%>
+      </li>
+    <% } -%>
+  </ul>
+</nav>

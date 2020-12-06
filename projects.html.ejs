@@ -38,17 +38,7 @@
   </head>
   <!-- Background pattern from Toptal Subtle Patterns -->
   <body style="background-image: url('styles/dark-honeycomb.png');">
-    <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
-      <a class="navbar-brand"><img src="styles/logo.png" style="max-height: 2rem;"/></a>
-      <ul class="navbar-nav mr-auto">
-        <li class="nav-item active">
-          <a class="nav-link" href="#">Projects <span class="sr-only">(current)</span></a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="demoinfo.html">Demo Info</a>
-        </li>
-      </ul>
-    </nav>
+    <%- include('nav'); -%>
     <main id="app">
       <div style="position: absolute; width: 100%;">
         <div v-for="error in errors" v-show="true"
@@ -130,7 +120,7 @@
         <div v-if="modal.title !== null" @click="dropDownTrigger = !dropDownTrigger"
             class="modal" tabindex="-1" role="dialog"
             aria-labelledby="modaltitle" aria-hidden="true" style="display: block;">
-          <div class="modal-dialog modal-dialog-scrollable" style="height: calc(100% - 1rem);">
+          <div class="modal-dialog modal-dialog-scrollable" :style="'height: calc(100% - 1rem);'">
             <div class="modal-content bg-dark">
               <div class="modal-header">
                 <h5 id="modaltitle" class="modal-title" v-show="modal.title" style="display: none;">
@@ -179,10 +169,6 @@
         </div>
       </div>
     </main>
-    <footer class="mt-auto py-3 bg-dark">
-      <div class="container text-muted">
-        Hand crafted with <img src="styles/heart-fill.svg" alt="love"/> by Wylie.
-      </div>
-    </footer>
+    <%- include('footer'); -%>
   </body>
 </html>

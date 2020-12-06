@@ -1,7 +1,9 @@
 'use strict';
 
 const axios = require('axios');
+const ejs = require('ejs');
 const fs = require('fs');
+const glob = require('glob');
 
 const keyword = [
   '.NET Core',
@@ -187,3 +189,20 @@ axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
       console.error('Cannot get projects.');
       process.exitCode = 1;
     });
+glob('*.html.ejs', (error, matches) => {
+  if (error !== null) {
+    console.error(error.message);
+    process.exitCode = 1;
+  }
+  for (const filename of matches) {
+    const htmlName = filename.slice(0, -4);
+    ejs.renderFile(filename, {current: htmlName}, (error, html) => {
+      if (error !== null) {
+        console.error(error.message);
+        process.exitCode = 1;
+      }
+      fs.writeFileSync(`${publicDir}/${htmlName}`, html);
+      console.log(`Processed EJS for ${htmlName}.`);
+    });
+  }
+});
