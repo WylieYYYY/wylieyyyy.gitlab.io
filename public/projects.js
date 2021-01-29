@@ -26,7 +26,7 @@ Vue.component('drop-menu', {
       <div v-if="opened" class="dropdown-menu" style="display: block;">
         <a v-for="record in items" :href="record.href"
             :download="record.fileName === undefined ?
-            'donwload' : record.fileName"
+            'download' : record.fileName"
             class="dropdown-item">
           {{record.name}}
         </a>
@@ -51,7 +51,6 @@ const vm = new Vue({
       title: null,
       dropDown: null,
       body: null,
-      hasDemo: undefined,
     },
     dropDownTrigger: false,
     downloadLinks: {},
@@ -152,7 +151,6 @@ const vm = new Vue({
     hideModal: function() {
       Vue.set(this.modal, 'title', null);
       this.modal.dropDown = null;
-      this.modal.hasDemo = undefined;
       this.modal.body = null;
     },
   },
@@ -237,6 +235,7 @@ const vm = new Vue({
                             };
                           }).filter((x) => x !== undefined),
                         ]);
+                        showHashProjectDetail(vm, project);
                       }
                     })
                     .catch((error) => {
@@ -269,6 +268,17 @@ const vm = new Vue({
           });
     }
     /**
+     * Show detail if the given project is in the hash.
+     * @param {object} vm - The Vue instance.
+     * @param {object} project - Project overview object returned by Gitlab API.
+     */
+    function showHashProjectDetail(vm, project) {
+      if (project.path === window.location.hash.substr(1) &&
+          vm.readMe[project.id]) {
+        vm.showDetailModal(project.id);
+      }
+    }
+    /**
      * Check pre-downloaded job builds, and set links if there are any.
      * @param {object} vm - The Vue instance.
      * @param {object} projects - Array of projects overview object returned by
@@ -292,6 +302,7 @@ const vm = new Vue({
                             };
                           }),
                     ]);
+                    showHashProjectDetail(vm, project);
                   }
                   return;
                 }
@@ -300,6 +311,7 @@ const vm = new Vue({
                   fileName: project.path + '-build.zip',
                   name: 'Latest (.zip)',
                 }]]);
+                showHashProjectDetail(vm, project);
               });
             }
           })
@@ -329,11 +341,6 @@ const vm = new Vue({
             updateDemoState(this, project);
             updateLicense(this, project);
           }
-          const hashProject = response.data.filter((project) => {
-            return project.path === window.location.hash.substr(1) &&
-                vm.readMe[project.id];
-          });
-          if (hashProject.length > 0) vm.showDetailModal(hashProject[0].id);
         })
         .catch((error) => {
           vm.errors = vm.errors.concat('Failed to fetch project detail.');
