@@ -329,6 +329,11 @@ const vm = new Vue({
             updateDemoState(this, project);
             updateLicense(this, project);
           }
+          const hashProject = response.data.filter((project) => {
+            return project.path === window.location.hash.substr(1) &&
+                vm.readMe[project.id];
+          });
+          if (hashProject.length > 0) vm.showDetailModal(hashProject[0].id);
         })
         .catch((error) => {
           vm.errors = vm.errors.concat('Failed to fetch project detail.');
