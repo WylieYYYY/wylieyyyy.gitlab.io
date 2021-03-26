@@ -189,13 +189,13 @@ axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
       console.error('Cannot get projects.');
       process.exitCode = 1;
     });
-glob('*.html.ejs', (error, matches) => {
+glob(__dirname + '/data/*.html.ejs', (error, matches) => {
   if (error !== null) {
     console.error(error.message);
     process.exitCode = 1;
   }
   for (const filename of matches) {
-    const htmlName = filename.slice(0, -4);
+    const htmlName = filename.slice(__dirname.length + 6, -4);
     ejs.renderFile(filename, {current: htmlName}, (error, html) => {
       if (error !== null) {
         console.error(error.message);

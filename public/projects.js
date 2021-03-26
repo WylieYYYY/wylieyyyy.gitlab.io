@@ -174,8 +174,8 @@ const vm = new Vue({
                   'https://gitlab.com/api/v4/projects/' + project.id +
                   '/repository/files/' + imagePath + '/raw?ref=master');
             } else {
-              Vue.set(vm.screenshot, project.id, 'https://via.placeholder.com/' +
-                  '512x384.png?text=No+Screenshot+Available');
+              Vue.set(vm.screenshot, project.id, 'https://via.placeholder.com' +
+                  '/512x384.png?text=No+Screenshot+Available');
             }
           })
           .catch((error) => {
