@@ -1,25 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
   <head>
-    <meta charset="utf-8">
-    <meta name="theme-color" content="#40e0d0">
     <title>Demonstration Info</title>
-    <link rel="shortcut icon" type="image/png" href="styles/smiley.svg"/>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"/>
-    <style>
-      a {
-        color: #20c997;
-      }
-      code {
-        color: #e83e8c;
-      }
-    </style>
+    <%- include('default-head'); -%>
   </head>
-  <!-- Background pattern from Toptal Subtle Patterns -->
-  <body class="text-light"
-      style="background-image: url('styles/dark-honeycomb.png');">
+  <body class="text-light">
     <%- include('nav'); -%>
-    <div class="jumbotron text-light bg-dark m-3 py-4">
+    <main class="jumbotron text-light bg-dark m-3 py-4">
       <h3>Demonstration Information</h3>
       <h4>Where do my data go to when I am using the demos?</h4>
       <ul>
@@ -61,7 +48,7 @@
         Getinfo CSharp also uses <a href="https://blazor.net/">Blazor.NET</a>
         as a compatibility layer.
       </div>
-    </div>
+    </main>
     <%- include('footer'); -%>
   </body>
 </html>

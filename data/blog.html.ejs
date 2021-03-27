@@ -1,20 +1,14 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
   <head>
-    <meta charset="utf-8">
-    <meta name="theme-color" content="#40e0d0">
     <title>WylieYYYY's Blog</title>
-    <link rel="shortcut icon" type="image/png" href="styles/smiley.svg"/>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"/>
-    <link rel="stylesheet" href="styles/styles.css"/>
+    <%- include('default-head'); -%>
   </head>
-  <!-- Background pattern from Toptal Subtle Patterns -->
-  <body class="text-light"
-      style="background-image: url('styles/dark-honeycomb.png');">
+  <body class="text-light">
     <%- include('nav'); -%>
-    <article>
+    <main>
       <% for (const post of posts) { -%>
-        <div class="card m-5" style="width: 80%;">
+        <div class="card m-5" style="background-color: #121212; width: 80%;">
           <div class="card-body">
             <h5 class="card-title"><%= post.title %></h5>
             <h6 class="card-subtitle mb-2 text-muted"><%= post.subtitle %></h6>
@@ -22,7 +16,7 @@
           </div>
         </div>
       <% } -%>
-    </article>
+    </main>
     <%- include('footer'); -%>
   </body>
 </html>
