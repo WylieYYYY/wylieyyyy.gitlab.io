@@ -4,6 +4,7 @@ const axios = require('axios');
 const ejs = require('ejs');
 const fs = require('fs');
 const glob = require('glob');
+const md = require('markdown-it')().use(require('markdown-it-imsize'));
 
 const keyword = [
   '.NET Core',
@@ -177,6 +178,62 @@ function checkLastDeployTime(projects) {
       });
 }
 
+/**
+ * Parse markdown blog posts to an object array with attributes and HTML.
+ * @return {Array} Array of objects reprenting posts.
+ */
+function parseBlogPosts() {
+  const posts = [];
+  let postTitle = 'Untitled';
+  let inTitleHeading = false;
+  md.renderer.rules['heading_open'] = (tokens, idx, options, env, slf) => {
+    const token = tokens[idx];
+    if (idx == 0 && token.tag === 'h1') {
+      inTitleHeading = true;
+      tokens[idx + 1].type = 'io.gitlab.wylieyyyy.post_title';
+      return '';
+    }
+    return slf.renderToken(tokens, idx, options);
+  };
+  md.renderer.rules['io.gitlab.wylieyyyy.post_title'] = (
+      tokens, idx, options, env, slf
+  ) => {
+    postTitle = tokens[idx].content;
+    return '';
+  };
+  md.renderer.rules['heading_close'] = (tokens, idx, options, env, slf) => {
+    const token = tokens[idx];
+    if (token.tag === 'h1' && inTitleHeading) {
+      inTitleHeading = false;
+      return '';
+    }
+    return slf.renderToken(tokens, idx, options);
+  };
+  try {
+    const matches = glob.sync(__dirname + '/data/posts/*.md').sort().reverse();
+    for (const filepath of matches) {
+      postTitle = 'Untitled';
+      const post = {
+        subtitle: filepath.slice(__dirname.length + 12, -3),
+      };
+      try {
+        post.content = fs.readFileSync(filepath, 'utf8');
+        post.content = md.render(post.content);
+      } catch (err) {
+        console.error(err);
+        process.exitCode = 1;
+      }
+      post.title = postTitle;
+      posts.push(post);
+      console.log(`Processed post ${post.subtitle}.`);
+    }
+  } catch (error) {
+    console.error(error.message);
+    process.exitCode = 1;
+  }
+  return posts;
+}
+
 axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
     'order_by=path&sort=asc')
     .then((response) => {
@@ -194,9 +251,13 @@ glob(__dirname + '/data/*.html.ejs', (error, matches) => {
     console.error(error.message);
     process.exitCode = 1;
   }
-  for (const filename of matches) {
-    const htmlName = filename.slice(__dirname.length + 6, -4);
-    ejs.renderFile(filename, {current: htmlName}, (error, html) => {
+  const posts = parseBlogPosts();
+  for (const filepath of matches) {
+    const htmlName = filepath.slice(__dirname.length + 6, -4);
+    ejs.renderFile(filepath, {
+      current: htmlName,
+      posts: posts,
+    }, (error, html) => {
       if (error !== null) {
         console.error(error.message);
         process.exitCode = 1;
