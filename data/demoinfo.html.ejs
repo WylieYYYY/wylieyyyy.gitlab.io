@@ -6,49 +6,7 @@
   </head>
   <body class="text-light">
     <%- include('nav'); -%>
-    <main class="jumbotron text-light bg-dark m-3 py-4">
-      <h3>Demonstration Information</h3>
-      <h4>Where do my data go to when I am using the demos?</h4>
-      <ul>
-        <li>
-          All data are stored on the browser temporarily, they will be cleared when your browser is closed.
-        </li>
-        <li>
-          As this is a static site, hosted by
-          <a href="https://about.gitlab.com/stages-devops-lifecycle/pages/">Gitlab Pages</a>,
-          no data can be stored on the server.
-        </li>
-        <li>
-          Some APIs does not accept brower requests, and so
-          <a href="https://cors-anywhere.herokuapp.com/">CORS-Anywhere</a>
-          service is used sometimes.
-        </li>
-        <li>Additional usage can be viewed on individual project's README.</li>
-      </ul>
-      <p>If you do not wish to send your data:</p>
-      <ul>
-        <li>to my website for processing, download to use the individual project.</li>
-        <li>
-          through CORS-Anywhere usage, please download the project
-          and host it with a local server, or executing it offline if possible.
-        </li>
-        <li>
-          to any other parties stated on the project's README,
-          please do not use the demo or project.
-        </li>
-      </ul>
-      <h4>How can I protect my data when I am using the demos?</h4>
-      <ol>
-        <li>Using a disposable rate-limited API key.</li>
-        <li>Avoid using sensitive data on the site.</li>
-      </ol>
-      <h4>How do these demos work?</h4>
-      <div>
-        Most projects are minimally patched to work on this static site,
-        Getinfo CSharp also uses <a href="https://blazor.net/">Blazor.NET</a>
-        as a compatibility layer.
-      </div>
-    </main>
+    <main class="jumbotron text-light bg-dark m-3 py-4"><%- content -%></main>
     <%- include('footer'); -%>
   </body>
 </html>
