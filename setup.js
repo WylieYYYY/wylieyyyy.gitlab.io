@@ -4,6 +4,7 @@ const axios = require('axios');
 const ejs = require('ejs');
 const fs = require('fs');
 const glob = require('glob');
+const hljs = require('highlight.js');
 const md = require('markdown-it');
 
 (function main() {
@@ -223,7 +224,19 @@ function parseBlogPosts() {
   const posts = [];
   let postTitle = 'Untitled';
   let inTitleHeading = false;
-  const parser = md().use(require('markdown-it-imsize'));
+  const parser = md({
+    highlight: (str, lang) => {
+      if (lang && hljs.getLanguage(lang)) {
+        try {
+          console.log(hljs.highlight(str, {language: lang}))
+          return hljs.highlight(str, {language: lang}).value;
+        } catch (error) {
+          console.error(error.message);
+        }
+      }
+      return '';
+    },
+  }).use(require('markdown-it-imsize'));
   parser.renderer.rules['heading_open'] = (tokens, idx, options, env, slf) => {
     const token = tokens[idx];
     if (idx == 0 && token.tag === 'h1') {
