@@ -228,7 +228,6 @@ function parseBlogPosts() {
     highlight: (str, lang) => {
       if (lang && hljs.getLanguage(lang)) {
         try {
-          console.log(hljs.highlight(str, {language: lang}))
           return hljs.highlight(str, {language: lang}).value;
         } catch (error) {
           console.error(error.message);
