@@ -1,11 +1,13 @@
 'use strict';
 
 const axios = require('axios');
+const crypto = require('crypto');
 const ejs = require('ejs');
 const fs = require('fs');
 const glob = require('glob');
 const hljs = require('highlight.js');
 const md = require('markdown-it');
+const sharp = require('sharp');
 
 (function main() {
   axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
@@ -66,6 +68,7 @@ let lastDeployAt = '';
 const buildsComplex = {
   artifacts: [],
   badges: {},
+  webp: {},
 };
 let projectsResponse;
 let pendingCount;
@@ -86,7 +89,7 @@ function errorFunction(errorMessage) {
   };
 }
 
-/** Called when all artifacts are fetched,  */
+/** Called when all artifacts are fetched, fetches badges from README. */
 function fetchBadges() {
   console.log('Prefetching all badges.');
   pendingCount = projectsResponse.length;
@@ -104,6 +107,60 @@ function fetchBadges() {
         .catch((error) => {
           console.log(`No README for ${project.name}.`);
         })
+        .finally(() => {
+          if (--pendingCount === 0) optimizeImages();
+        });
+  }
+}
+
+/** Called after fetching badges. Downloads, resizes, and saves WebP files. */
+function optimizeImages() {
+  console.log('Prefetching and optimizing screenshots.');
+  pendingCount = projectsResponse.length;
+  const hash = crypto.createHash('sha256');
+  for (const project of projectsResponse) {
+    axios.get('https://gitlab.com/api/v4/projects/' +
+        project.id + '/repository/tree')
+        .then((response) => {
+          const fileNames = response.data.map((x) => x.name).sort();
+          const imagePaths = fileNames.filter((name) => {
+            return /screenshot*/.test(name);
+          });
+          pendingCount += imagePaths.length;
+          for (const imagePath of imagePaths) {
+            axios({
+              method: 'get',
+              url: 'https://gitlab.com/api/v4/projects/' + project.id +
+                  '/repository/files/' + imagePath + '/raw?ref=master',
+              responseType: 'stream',
+            })
+                .then(async (response) => {
+                  const digest = hash.update(imagePath)
+                      .copy().digest('hex').substring(0, 8);
+                  buildsComplex.webp[`${project.id}-${imagePath}`] = digest;
+                  const webPPrefix = publicDir +
+                      `/styles/webp/${project.id}-${digest}`;
+                  const stream = response.data
+                      .pipe(sharp().webp())
+                      .pipe(fs.createWriteStream(webPPrefix + '.webp'));
+                  await new Promise((fulfill) => stream.on('finish', fulfill));
+                  console.log(`Got screenshot ${digest} for ${project.name}.`);
+                  if (imagePaths[0] === imagePath) {
+                    sharp(webPPrefix + '.webp')
+                        .resize(512, 384, {fit: 'outside'})
+                        .resize(512, 384, {fit: 'cover'})
+                        .toFile(webPPrefix + '-card.webp');
+                    console.log(`Converted screenshot ${digest} to card.`);
+                  }
+                })
+                .catch(errorFunction('Failed to fetch screenshot for ' +
+                    `${project.name}.`))
+                .finally(() => {
+                  if (--pendingCount === 0) dumpFile();
+                });
+          }
+        })
+        .catch(errorFunction(`Failed to get tree for ${project.name}.`))
         .finally(() => {
           if (--pendingCount === 0) dumpFile();
         });
@@ -246,7 +303,7 @@ function parseBlogPosts() {
     return slf.renderToken(tokens, idx, options);
   };
   parser.renderer.rules['io.gitlab.wylieyyyy.post_title'] = (
-      tokens, idx, options, env, slf
+      tokens, idx, options, env, slf,
   ) => {
     postTitle = tokens[idx].content;
     return '';

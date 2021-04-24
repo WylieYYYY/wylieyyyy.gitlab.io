@@ -37,6 +37,7 @@ Vue.component('drop-menu', {
 const vm = new Vue({
   el: '#app',
   data: {
+    buildDetails: null,
     badges: {},
     response: null,
     screenshot: {},
@@ -110,12 +111,23 @@ const vm = new Vue({
       axios.get('https://gitlab.com/api/v4/projects/' + id +
           '/repository/files/README.md/raw?ref=master')
           .then((response) => {
+            if (this.buildDetails) {
+              for (const screenshotId of Object.keys(this.buildDetails.webp)) {
+                const idMatch = screenshotId.match(/(.*?)-(.*)/);
+                if (!idMatch || idMatch[1] !== id.toString()) continue;
+                response.data = response.data.replace(
+                    new RegExp(`(\\[.*?]\\()(${idMatch[2]})( .*?\\))`, 'g'),
+                    `$1${document.location.origin}/styles/webp/` +
+                    `${id}-${this.buildDetails.webp[screenshotId]}.webp$3`
+                );
+              }
+            }
             this.readMe[id] = this.md.render(response.data
-                .replace(/(\[.*?]\()(?!https:\/\/)(.*?)( .*?\))/g,
+                .replace(/(\[.*?]\()(?!https?:\/\/)(.*?)( .*?\))/g,
                     '$1https://gitlab.com/api/v4/projects/' + id +
                     '/repository/files/$2/raw?ref=master$3'))
-                .replace(/(<img)(.*?src="(.*?)".*?>)/g, '<a href="$3">$1 ' +
-                    'style="max-width: 25rem; height: auto;" $2</a>');
+                .replace(/(<img)(.*?>)/g,
+                    '$1 style="max-width: 25rem; height: auto;" $2');
             Vue.set(this.modal, 'body', this.readMe[id]);
           })
           .catch((error) => {
@@ -160,8 +172,9 @@ const vm = new Vue({
      * set to placeholder if none.
      * @param {object} vm - The Vue instance.
      * @param {object} project - Project overview object returned by Gitlab API.
+     * @param {object} builds - JSON object of build details if fetched.
      */
-    function updateScreenshots(vm, project) {
+    function updateScreenshots(vm, project, builds) {
       axios.get('https://gitlab.com/api/v4/projects/' +
           project.id + '/repository/tree')
           .then((response) => {
@@ -170,12 +183,17 @@ const vm = new Vue({
               return /screenshot*/.test(name);
             })[0];
             if (imagePath !== undefined) {
-              Vue.set(vm.screenshot, project.id,
-                  'https://gitlab.com/api/v4/projects/' + project.id +
-                  '/repository/files/' + imagePath + '/raw?ref=master');
+              if (builds && builds.webp[`${project.id}-${imagePath}`]) {
+                Vue.set(vm.screenshot, project.id, `styles/webp/${project.id}` +
+                    `-${builds.webp[`${project.id}-${imagePath}`]}-card.webp`);
+              } else {
+                Vue.set(vm.screenshot, project.id,
+                    'https://gitlab.com/api/v4/projects/' + project.id +
+                    '/repository/files/' + imagePath + '/raw?ref=master');
+              }
             } else {
               Vue.set(vm.screenshot, project.id, 'https://via.placeholder.com' +
-                  '/512x384.png?text=No+Screenshot+Available');
+                  '/512x384.webp?text=No+Screenshot+Available');
             }
           })
           .catch((error) => {
@@ -283,42 +301,36 @@ const vm = new Vue({
      * @param {object} vm - The Vue instance.
      * @param {object} projects - Array of projects overview object returned by
      *     Gitlab API.
+     * @param {object} builds - JSON object of build details.
      */
-    function updateJobBuild(vm, projects) {
-      axios.get('builds.json')
-          .then((response) => {
-            vm.badges = response.data.badges;
-            for (const project of projects) {
-              updateVersions(vm, project).then((hasNoReleases) => {
-                if (response.data.artifacts.indexOf(project.id) === -1) {
-                  if (hasNoReleases) {
-                    Vue.set(vm.downloadLinks, project.id, ['Download Source',
-                      ['.zip', '.tar.gz', '.tar.bz2', '.tar']
-                          .map((format) => {
-                            return {
-                              href: `${project.web_url}/-/archive/master/` +
-                                  `${project.path}-master${format}`,
-                              name: 'Master (' + format + ')',
-                            };
-                          }),
-                    ]);
-                    showHashProjectDetail(vm, project);
-                  }
-                  return;
-                }
-                Vue.set(vm.downloadLinks, project.id, ['Download Build', [{
-                  href: project.id + '.zip',
-                  fileName: project.path + '-build.zip',
-                  name: 'Latest (.zip)',
-                }]]);
-                showHashProjectDetail(vm, project);
-              });
+    function updateJobBuild(vm, projects, builds) {
+      vm.badges = builds.badges;
+      for (const project of projects) {
+        updateVersions(vm, project).then((hasNoReleases) => {
+          if (builds.artifacts.indexOf(project.id) === -1) {
+            if (hasNoReleases) {
+              Vue.set(vm.downloadLinks, project.id, ['Download Source',
+                ['.zip', '.tar.gz', '.tar.bz2', '.tar']
+                    .map((format) => {
+                      return {
+                        href: `${project.web_url}/-/archive/master/` +
+                            `${project.path}-master${format}`,
+                        name: 'Master (' + format + ')',
+                      };
+                    }),
+              ]);
+              showHashProjectDetail(vm, project);
             }
-          })
-          .catch((error) => {
-            vm.errors = vm.errors.concat('Failed to fetch' +
-                ' unreleased build detail.');
-          });
+            return;
+          }
+          Vue.set(vm.downloadLinks, project.id, ['Download Build', [{
+            href: project.id + '.zip',
+            fileName: project.path + '-build.zip',
+            name: 'Latest (.zip)',
+          }]]);
+          showHashProjectDetail(vm, project);
+        });
+      }
     }
     /**
      * Check project demo and set badge.
@@ -330,14 +342,27 @@ const vm = new Vue({
           .then((response) => Vue.set(vm.projectHasDemo, project.id, true))
           .catch((error) => Vue.set(vm.projectHasDemo, project.id, false));
     }
+
     axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
         'order_by=path&sort=asc')
         .then((response) => {
           this.response = response.data;
-          updateJobBuild(this, response.data);
+          axios.get('builds.json')
+              .then((builds) => {
+                this.buildDetails = builds.data;
+                updateJobBuild(this, response.data, builds.data);
+                for (const project of response.data) {
+                  updateScreenshots(this, project, builds.data);
+                }
+              })
+              .catch((error) => {
+                vm.errors = vm.errors.concat('Failed to fetch build detail.');
+                for (const project of response.data) {
+                  updateScreenshots(this, project);
+                }
+              });
           for (const project of response.data) {
             vm.readMe[project.id] = project.readme_url !== null;
-            updateScreenshots(this, project);
             updateDemoState(this, project);
             updateLicense(this, project);
           }

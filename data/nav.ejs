@@ -6,7 +6,7 @@
   }
 %>
 <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
-  <a class="navbar-brand"><img src="styles/logo.png" style="max-height: 2rem;"/></a>
+  <a class="navbar-brand"><img src="/styles/logo.webp" style="max-height: 2rem;"/></a>
   <ul class="navbar-nav mr-auto">
     <% for (const [name, path] of Object.entries(pagePairs)) { -%>
       <% if (current === path) { -%>
@@ -14,7 +14,7 @@
           <a class="nav-link" href="#"><%= name %> <span class="sr-only">(current)</span></a>
       <% } else { -%>
         <li class="nav-item">
-          <a class="nav-link" href="<%= path %>"><%= name %></a>
+          <a class="nav-link" href="/<%= path %>"><%= name %></a>
       <% } -%>
       </li>
     <% } -%>

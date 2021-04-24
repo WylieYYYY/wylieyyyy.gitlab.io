@@ -22,7 +22,8 @@
     "glob": "^7.1.6",
     "highlight.js": "^10.7.1",
     "markdown-it": "^12.0.4",
-    "markdown-it-imsize": "^2.0.1"
+    "markdown-it-imsize": "^2.0.1",
+    "sharp": "^0.28.1"
   },
   "devDependencies": {
     "eslint": "^7.5.0",
