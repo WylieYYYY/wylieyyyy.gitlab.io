@@ -37,6 +37,7 @@ Vue.component('drop-menu', {
 const vm = new Vue({
   el: '#app',
   data: {
+    buildDetails: null,
     badges: {},
     response: null,
     screenshot: {},
@@ -110,12 +111,23 @@ const vm = new Vue({
       axios.get('https://gitlab.com/api/v4/projects/' + id +
           '/repository/files/README.md/raw?ref=master')
           .then((response) => {
+            if (this.buildDetails) {
+              for (const screenshotId of Object.keys(this.buildDetails.webp)) {
+                const idMatch = screenshotId.match(/(.*?)-(.*)/);
+                if (!idMatch || idMatch[1] !== id.toString()) continue;
+                response.data = response.data.replace(
+                    new RegExp(`(\\[.*?]\\()(${idMatch[2]})( .*?\\))`, 'g'),
+                    `$1${document.location.origin}/styles/webp/` +
+                    `${id}-${this.buildDetails.webp[screenshotId]}.webp$3`
+                );
+              }
+            }
             this.readMe[id] = this.md.render(response.data
-                .replace(/(\[.*?]\()(?!https:\/\/)(.*?)( .*?\))/g,
+                .replace(/(\[.*?]\()(?!https?:\/\/)(.*?)( .*?\))/g,
                     '$1https://gitlab.com/api/v4/projects/' + id +
                     '/repository/files/$2/raw?ref=master$3'))
-                .replace(/(<img)(.*?src="(.*?)".*?>)/g, '<a href="$3">$1 ' +
-                    'style="max-width: 25rem; height: auto;" $2</a>');
+                .replace(/(<img)(.*?>)/g,
+                    '$1 style="max-width: 25rem; height: auto;" $2');
             Vue.set(this.modal, 'body', this.readMe[id]);
           })
           .catch((error) => {
@@ -171,9 +183,9 @@ const vm = new Vue({
               return /screenshot*/.test(name);
             })[0];
             if (imagePath !== undefined) {
-              if (builds && builds.webp[imagePath]) {
+              if (builds && builds.webp[`${project.id}-${imagePath}`]) {
                 Vue.set(vm.screenshot, project.id, `styles/webp/${project.id}` +
-                    `-${builds.webp[imagePath]}-card.webp`);
+                    `-${builds.webp[`${project.id}-${imagePath}`]}-card.webp`);
               } else {
                 Vue.set(vm.screenshot, project.id,
                     'https://gitlab.com/api/v4/projects/' + project.id +
@@ -337,6 +349,7 @@ const vm = new Vue({
           this.response = response.data;
           axios.get('builds.json')
               .then((builds) => {
+                this.buildDetails = builds.data;
                 updateJobBuild(this, response.data, builds.data);
                 for (const project of response.data) {
                   updateScreenshots(this, project, builds.data);

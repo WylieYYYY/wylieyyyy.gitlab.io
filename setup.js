@@ -135,12 +135,9 @@ function optimizeImages() {
               responseType: 'stream',
             })
                 .then(async (response) => {
-                  if (!buildsComplex.webp[imagePath]) {
-                    const newDigest = hash.update(imagePath)
+                  const digest = hash.update(imagePath)
                       .copy().digest('hex').substring(0, 8);
-                    buildsComplex.webp[imagePath] = newDigest;
-                  }
-                  const digest = buildsComplex.webp[imagePath];
+                  buildsComplex.webp[`${project.id}-${imagePath}`] = digest;
                   const webPPrefix = publicDir +
                       `/styles/webp/${project.id}-${digest}`;
                   const stream = response.data
