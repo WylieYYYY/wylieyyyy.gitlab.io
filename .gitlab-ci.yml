@@ -15,7 +15,7 @@ pages:
     script:
         - npm i
         - npm run build
-        - find public -type f -regex '.*\.\(html\|js\|css\)$' -exec gzip -k {} \;
+        - find public -type f -regex '.*\.\(css\|html\|js\|json\)$' -exec gzip -k {} \;
     artifacts:
         paths:
             - public
