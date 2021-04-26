@@ -7,7 +7,10 @@ const fs = require('fs');
 const glob = require('glob');
 const hljs = require('highlight.js');
 const md = require('markdown-it');
+const sass = require('node-sass');
 const sharp = require('sharp');
+
+const publicDir = __dirname + '/public';
 
 (function main() {
   axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
@@ -40,6 +43,11 @@ const sharp = require('sharp');
         console.log(`Processed EJS for ${htmlName}.`);
       });
     }
+    sass.render({file: __dirname + '/data/styles.sass'}, (error, result) => {
+      errorFunction()(error);
+      fs.writeFileSync(publicDir + '/styles/styles.css', result.css);
+      console.log('Processed SASS styles.');
+    });
   });
 })();
 
@@ -60,8 +68,6 @@ const keyword = [
   'VTE',
   'XML',
 ];
-
-const publicDir = __dirname + '/public';
 
 let lastDeployAt = '';
 

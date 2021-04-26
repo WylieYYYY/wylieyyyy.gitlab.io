@@ -4,4 +4,5 @@ public/*.json
 public/*.zip
 public/*.html
 !public/index.html
+public/styles/styles.css
 public/styles/webp/*.webp
