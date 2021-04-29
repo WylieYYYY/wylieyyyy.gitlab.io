@@ -19,8 +19,8 @@ Vue.component('drop-menu', {
       <button @click.stop="opened = !opened"
           :class="'btn btn-success dropdown-toggle' +
               (opened ? ' dropped' : '')"
-          style="box-shadow: none;" type="button" aria-haspopup="true"
-          aria-expanded="false">
+          style="box-shadow: none; outline: 0;" type="button"
+          aria-haspopup="true" aria-expanded="false">
         {{title}}
       </button>
       <div v-if="opened" class="dropdown-menu" style="display: block;">
@@ -73,11 +73,13 @@ const vm = new Vue({
           hash *= 16777619;
           hash |= 0;
         }
-        const colorMean = ((hash & 0xff) + (hash >> 8 & 0xff) +
-            (hash >> 16 & 0xff)) / 3;
+        const colorMean = ((hash & 0xff) * 1.1 + (hash >> 8 & 0xff) * 1.4 +
+            (hash >> 16 & 0xff) * 0.8) / 3;
         if (colorMean > 127) hash = ~hash;
         badgeStyles[value] = 'background-color: rgb(' +
-            `${hash & 0xff},${hash >> 8 & 0xff},${hash >> 16 & 0xff});`;
+            `${(hash & 0xff) * 0.7 | 0},` +
+            `${(hash >> 8 & 0xff) * 0.5 | 0},` +
+            `${(hash >> 16 & 0xff) * 0.9 | 0});`;
         if (value === value.toUpperCase()) {
           badgeStyles[value] += ' font-variant: small-caps;';
         }
