@@ -2,10 +2,10 @@
 <html lang="zh-Hant">
   <head>
     <title>WylieYYYY's Projects</title>
-    <%- include('default-head'); -%>
+    <%- include('../components/default-head'); -%>
     <script src="https://cdn.jsdelivr.net/npm/vue"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js" defer></script>
     <script src="projects.js" defer></script>
     <style>
       .fade-leave-active {
@@ -25,7 +25,7 @@
     </style>
   </head>
   <body>
-    <%- include('nav'); -%>
+    <%- include('../components/nav'); -%>
     <main id="app">
       <div style="position: absolute; width: 100%;">
         <div v-for="error in errors" v-show="true"
@@ -51,7 +51,7 @@
           <img v-if="screenshot[project.id]" class="card-img-top bg-dark"
               :src="screenshot[project.id]" :alt="project.name + '\'s Screenshot'"
               :title="project.name + '\'s Screenshot'"
-              style="width: auto; height: 15rem; object-fit: cover;"/>
+              style="width: calc(20rem - 2px); height: 15rem; object-fit: cover;"/>
           <transition name="fade">
             <div v-if="!screenshot[project.id]"
                 class="bg-dark d-flex justify-content-center align-items-center"
@@ -64,14 +64,15 @@
           <div class="card-body bg-dark">
             <h2 class="card-title">
               <a :href="project.http_url_to_repo">
-                {{project.name}} <img src="styles/repo.svg"/>
+                {{project.name}} <img src="styles/repo.svg" alt="" style="width: 1rem; height: 1rem;"/>
               </a>
             </h2>
-            <h4 title="Version" style="display: inline;">{{version[project.id]}}</h4>
+            <h3 title="Version" class="h4" style="display: inline;">{{version[project.id]}}</h3>
             <a :href="projectHasDemo[project.id] ? project.path : '#'"
                 @click="projectHasDemo[project.id] ? '' : event.preventDefault()">
-              <img :src="'https://img.shields.io/badge/' + (projectHasDemo[project.id] ?
-                  'demo-click_here-informational' : 'demo-none_yet-inactive')" style="float: right;"
+                <img :src="'https://img.shields.io/badge/demo-' + (projectHasDemo[project.id] ?
+                  'click_here-005a8f' : 'none_yet-333')"
+                  width="100" height="20" style="float: right;"
                   :alt="'Demo link ' + (projectHasDemo[project.id] ? '' : 'un') + 'available'"/>
             </a>
             <div>
@@ -90,7 +91,7 @@
                 style="position: absolute; bottom: 1rem; right: 1rem;">
               <li title="Project License"
                   class="d-flex align-items-center list-group-item bg-dark border-info p-1">
-                <img src="styles/law.svg"/>&nbsp;
+                <img src="styles/law.svg" alt="" style="width: 1rem; height: 1rem;"/>&nbsp;
                 <a @click.prevent="showLicenseModal(project.id)" href="#" aria-haspopup="true"
                     aria-expanded="false">
                   {{license[project.id]}}
@@ -98,7 +99,8 @@
               </li>
               <li title="Latest Release On"
                   class="d-flex align-items-center list-group-item bg-dark border-info p-1">
-                <img src="styles/history.svg"/>&nbsp;{{latestCreated[project.id].substring(0, 10)}}
+                <img src="styles/history.svg" alt="" style="width: 1rem; height: 1rem;"/>
+                &nbsp;{{latestCreated[project.id].substring(0, 10)}}
               </li>
             </ul>
           </div>
@@ -156,6 +158,6 @@
         </div>
       </div>
     </main>
-    <%- include('footer'); -%>
+    <%- include('../components/footer'); -%>
   </body>
 </html>

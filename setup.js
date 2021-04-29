@@ -1,15 +1,20 @@
 'use strict';
 
 const axios = require('axios');
+const CleanCSS = require('clean-css');
 const crypto = require('crypto');
 const ejs = require('ejs');
 const fs = require('fs');
 const glob = require('glob');
 const hljs = require('highlight.js');
 const md = require('markdown-it');
+const {PurgeCSS} = require('purgecss');
+const sass = require('sass');
 const sharp = require('sharp');
 
-(function main() {
+const publicDir = __dirname + '/public';
+
+(async function main() {
   axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
       'order_by=path&sort=asc')
       .then((response) => {
@@ -19,17 +24,19 @@ const sharp = require('sharp');
         checkLastDeployTime(response.data);
       })
       .catch(errorFunction('Cannot get projects.'));
-  glob(__dirname + '/data/*.html.ejs', (error, matches) => {
+  glob(__dirname + '/data/pages/*.html.ejs', (error, matches) => {
     errorFunction()(error);
     for (const filepath of matches) {
-      const htmlName = filepath.slice(__dirname.length + 6, -4);
+      const htmlName = filepath
+          .slice(__dirname.length + 6, -4).split('/').pop();
       const args = {current: htmlName};
       switch (htmlName) {
         case 'blog.html':
           args['posts'] = parseBlogPosts();
           break;
         case 'demoinfo.html':
-          args['content'] = parseMarkdownFile(__dirname + '/data/demoinfo.md');
+          args['content'] = parseMarkdownFile(__dirname +
+            '/data/pages/demoinfo.md');
           break;
         default:
           break;
@@ -40,6 +47,22 @@ const sharp = require('sharp');
         console.log(`Processed EJS for ${htmlName}.`);
       });
     }
+    sass.render({
+      file: __dirname + '/data/styles.scss',
+    }, async (error, result) => {
+      errorFunction()(error);
+      const purgedCSS = await new PurgeCSS().purge({
+        content: ['data/**/*.ejs'],
+        css: [{raw: result.css}],
+        safelist: [/^dropdown-(toggle|menu|item)$/, 'btn-success'],
+      });
+      const minified = new CleanCSS({
+        level: {2: {all: true}},
+      }).minify(purgedCSS[0].css);
+      if (minified.errors.length > 0) errorFunction()(minified.errors[0]);
+      fs.writeFileSync(publicDir + '/styles/styles.css', minified.styles);
+      console.log('Processed SASS styles.');
+    });
   });
 })();
 
@@ -60,8 +83,6 @@ const keyword = [
   'VTE',
   'XML',
 ];
-
-const publicDir = __dirname + '/public';
 
 let lastDeployAt = '';
 

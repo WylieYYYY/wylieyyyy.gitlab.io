@@ -6,7 +6,9 @@
   }
 %>
 <nav class="navbar navbar-expand-sm navbar-dark bg-dark">
-  <a class="navbar-brand"><img src="/styles/logo.webp" style="max-height: 2rem;"/></a>
+  <a class="navbar-brand">
+    <img src="/styles/logo.webp" alt="WylieYYYY's Projects" style="width: 10rem; height: 2rem;"/>
+  </a>
   <ul class="navbar-nav mr-auto">
     <% for (const [name, path] of Object.entries(pagePairs)) { -%>
       <% if (current === path) { -%>
