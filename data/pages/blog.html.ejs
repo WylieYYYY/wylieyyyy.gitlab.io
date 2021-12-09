@@ -8,8 +8,18 @@
   <body class="text-light">
     <%- include('../components/nav'); -%>
     <main>
-      <% for (const post of posts) { -%>
-        <div class="card m-5" style="background-color: #121212; width: 80%;">
+      <%
+        const rainbowMap = '222210000012';
+        function getRainbow(idx) {
+          return 'rgb(' +
+              `${Number(rainbowMap[idx % 12]) * 127},` +
+              `${Number(rainbowMap[(idx + 8) % 12]) * 127},` +
+              `${Number(rainbowMap[(idx + 4) % 12]) * 127})`
+        }
+      %>
+      <% for (const [idx, post] of posts.entries()) { -%>
+        <div class="card m-5" style="background-color: #121212; width: 80%;
+            border-top: 3px solid <%= getRainbow(posts.length - idx) %>;">
           <div class="card-body">
             <h5 class="card-title"><%= post.title %></h5>
             <h6 class="card-subtitle mb-2 text-muted"><%= post.subtitle %></h6>

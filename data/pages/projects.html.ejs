@@ -3,13 +3,12 @@
   <head>
     <title>WylieYYYY's Projects</title>
     <%- include('../components/default-head'); -%>
-    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js" defer></script>
     <script src="projects.js" defer></script>
     <style>
       .fade-leave-active {
-        transition: opacity 0.5s;
+        transition: opacity 0.3s;
       }
       .fade-leave-to {
         opacity: 0;
@@ -55,7 +54,7 @@
           <transition name="fade">
             <div v-if="!screenshot[project.id]"
                 class="bg-dark d-flex justify-content-center align-items-center"
-                style="width: 100%; height: 15rem; position: absolute; transition-delay: 0.5s;">
+                style="width: 100%; height: 15rem; position: absolute;">
               <div class="spinner-border text-primary bg-dark" role="status">
                 <span class="sr-only">Loading...</span>
               </div>
@@ -105,8 +104,8 @@
             </ul>
           </div>
         </div>
-        <div v-if="modal.title !== null" class="modal-backdrop" style="opacity: 0.5;"></div>
-        <div v-if="modal.title !== null" @click="dropDownTrigger = !dropDownTrigger"
+        <div v-show="modal.title !== null" class="modal-backdrop" style="opacity: 0.5;"></div>
+        <div v-show="modal.title !== null" @click="dropDownTrigger = !dropDownTrigger"
             class="modal" tabindex="-1" role="dialog"
             aria-labelledby="modaltitle" aria-hidden="true" style="display: block;">
           <div class="modal-dialog modal-dialog-scrollable" :style="'height: calc(100% - 1rem);'">
@@ -157,7 +156,26 @@
           </div>
         </div>
       </div>
+      <%- include('../components/footer'); -%>
     </main>
-    <%- include('../components/footer'); -%>
+    <script type="text/x-template" id="drop-menu-template">
+      <div :class="type">
+        <button @click.stop="opened = !opened"
+            :class="'btn btn-success dropdown-toggle' +
+                (opened ? ' dropped' : '')"
+            style="box-shadow: none; outline: 0;" type="button"
+            aria-haspopup="true" aria-expanded="false">
+          {{title}}
+        </button>
+        <div v-if="opened" class="dropdown-menu" style="display: block;">
+          <a v-for="record in items" :href="record.href"
+              :download="record.fileName === undefined ?
+              'download' : record.fileName"
+              class="dropdown-item">
+            {{record.name}}
+          </a>
+        </div>
+      </div>
+    </script>
   </body>
 </html>

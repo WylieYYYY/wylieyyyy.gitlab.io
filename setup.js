@@ -7,10 +7,12 @@ const ejs = require('ejs');
 const fs = require('fs');
 const glob = require('glob');
 const hljs = require('highlight.js');
+const htmlMinify = require('html-minifier').minify;
 const md = require('markdown-it');
 const {PurgeCSS} = require('purgecss');
 const sass = require('sass');
 const sharp = require('sharp');
+const uglify = require('uglify-js');
 
 const publicDir = __dirname + '/public';
 
@@ -24,6 +26,11 @@ const publicDir = __dirname + '/public';
         checkLastDeployTime(response.data);
       })
       .catch(errorFunction('Cannot get projects.'));
+  fs.readFile(__dirname + '/data/projects.js', 'utf-8', (error, data) => {
+    errorFunction()(error);
+    fs.writeFileSync(publicDir + '/projects.js', uglify.minify(data).code);
+    console.log('Processed projects.js.');
+  });
   glob(__dirname + '/data/pages/*.html.ejs', (error, matches) => {
     errorFunction()(error);
     for (const filepath of matches) {
@@ -43,7 +50,23 @@ const publicDir = __dirname + '/public';
       }
       ejs.renderFile(filepath, args, (error, html) => {
         errorFunction()(error);
-        fs.writeFileSync(`${publicDir}/${htmlName}`, html);
+        fs.writeFileSync(`${publicDir}/${htmlName}`, htmlMinify(html, {
+          removeComments: true,
+          removeCommentsFromCDATA: true,
+          removeCDATASectionsFromCDATA: true,
+          collapseWhitespace: true,
+          collapseBooleanAttributes: true,
+          removeAttributeQuotes: true,
+          removeRedundantAttributes: true,
+          useShortDoctype: true,
+          removeEmptyAttributes: true,
+          removeEmptyElements: false,
+          removeOptionalTags: true,
+          removeScriptTypeAttributes: true,
+          removeStyleLinkTypeAttributes: true,
+          minifyJS: true,
+          minifyCSS: true,
+        }));
         console.log(`Processed EJS for ${htmlName}.`);
       });
     }

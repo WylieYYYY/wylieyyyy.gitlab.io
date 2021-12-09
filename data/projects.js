@@ -14,24 +14,7 @@ Vue.component('drop-menu', {
       this.opened = false;
     },
   },
-  template: `
-    <div :class="type">
-      <button @click.stop="opened = !opened"
-          :class="'btn btn-success dropdown-toggle' +
-              (opened ? ' dropped' : '')"
-          style="box-shadow: none; outline: 0;" type="button"
-          aria-haspopup="true" aria-expanded="false">
-        {{title}}
-      </button>
-      <div v-if="opened" class="dropdown-menu" style="display: block;">
-        <a v-for="record in items" :href="record.href"
-            :download="record.fileName === undefined ?
-            'download' : record.fileName"
-            class="dropdown-item">
-          {{record.name}}
-        </a>
-      </div>
-    </div>`,
+  template: '#drop-menu-template',
 });
 
 const vm = new Vue({
@@ -41,7 +24,6 @@ const vm = new Vue({
     badges: {},
     response: null,
     screenshot: {},
-    md: window.markdownit(),
     readMe: {},
     version: {},
     latestCreated: {},
@@ -58,6 +40,19 @@ const vm = new Vue({
     errors: [],
   },
   computed: {
+    /**
+     * Fetches the script for markdown parser lazily.
+     * @return {object} The markdown parser.
+     */
+    md: async function() {
+      return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/' +
+            'markdown-it/dist/markdown-it.min.js';
+        script.onload = () => resolve(window.markdownit());
+        document.head.appendChild(script);
+      });
+    },
     /**
      * Calculates background color and font variant for badges based on hash.
      * @return {object} Map of valid CSS string with keywords as keys.
@@ -112,7 +107,7 @@ const vm = new Vue({
       }
       axios.get('https://gitlab.com/api/v4/projects/' + id +
           '/repository/files/README.md/raw?ref=master')
-          .then((response) => {
+          .then(async (response) => {
             if (this.buildDetails) {
               for (const screenshotId of Object.keys(this.buildDetails.webp)) {
                 const idMatch = screenshotId.match(/(.*?)-(.*)/);
@@ -120,11 +115,10 @@ const vm = new Vue({
                 response.data = response.data.replace(
                     new RegExp(`(\\[.*?]\\()(${idMatch[2]})( .*?\\))`, 'g'),
                     `$1${document.location.origin}/styles/webp/` +
-                    `${id}-${this.buildDetails.webp[screenshotId]}.webp$3`
-                );
+                    `${id}-${this.buildDetails.webp[screenshotId]}.webp$3`);
               }
             }
-            this.readMe[id] = this.md.render(response.data
+            this.readMe[id] = (await this.md).render(response.data
                 .replace(/(\[.*?]\()(?!https?:\/\/)(.*?)( .*?\))/g,
                     '$1https://gitlab.com/api/v4/projects/' + id +
                     '/repository/files/$2/raw?ref=master$3'))
@@ -194,8 +188,7 @@ const vm = new Vue({
                     '/repository/files/' + imagePath + '/raw?ref=master');
               }
             } else {
-              Vue.set(vm.screenshot, project.id, 'https://via.placeholder.com' +
-                  '/512x384.webp?text=No+Screenshot+Available');
+              Vue.set(vm.screenshot, project.id, 'styles/no-screenshot.webp');
             }
           })
           .catch((error) => {
@@ -216,11 +209,12 @@ const vm = new Vue({
           .then((response) => {
             if (response.data.length === 0) {
               axios.get('https://gitlab.com/api/v4/projects/' + project.id +
-                  '/repository/commits')
+                  '/repository/branches/master')
                   .then((response) => {
-                    Vue.set(vm.version, project.id, response.data[0].short_id);
+                    Vue.set(vm.version, project.id,
+                        response.data.commit.short_id);
                     Vue.set(vm.latestCreated, project.id,
-                        response.data[0].created_at);
+                        response.data.commit.created_at);
                   })
                   .catch((error) => {
                     vm.errors = vm.errors.concat('Failed to fetch commits' +

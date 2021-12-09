@@ -1,8 +1,8 @@
 node_modules
 package-lock.json
-public/*.json
-public/*.zip
-public/*.html
+public/*
+!public/*/
 !public/index.html
+!public/robots.txt
 public/styles/styles.css
 public/styles/webp/*.webp

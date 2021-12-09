@@ -6,6 +6,8 @@
     $dark: color.scale(prefetch.$dark, $lightness: -15%),
 );
 
+/* purgecss start ignore */
+
 html {
     margin: 0;
     padding: 0;
@@ -27,5 +29,7 @@ main { flex: 1; }
 
 .text-muted { color: bootstrap.$gray-500 !important; }
 a { color: bootstrap.$teal; }
-code { color: bootstrap.$pink; }
+code { color: color.change(bootstrap.$pink, $lightness: 80%); }
 pre code { color: white; }
+
+/* purgecss end ignore */
