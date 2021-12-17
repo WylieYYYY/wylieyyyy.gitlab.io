@@ -15,17 +15,22 @@ const sharp = require('sharp');
 const uglify = require('uglify-js');
 
 const publicDir = __dirname + '/public';
+const projectEndPoint = 'https://gitlab.com/api/v4/projects';
 
 (async function main() {
-  axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
-      'order_by=path&sort=asc')
-      .then((response) => {
-        keyword.push(...response.data.map((x) => x.name));
-        projectsResponse = response.data;
-        pendingCount = response.data.length;
-        checkLastDeployTime(response.data);
-      })
-      .catch(errorFunction('Cannot get projects.'));
+  try {
+    await axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
+        'order_by=path&sort=asc')
+        .then(async (response) => {
+          keyword.push(...response.data.map((x) => x.name));
+          const lastDeployAt = await getLastDeployTime(response.data);
+          projectSpecificTasks(response.data, lastDeployAt);
+        })
+        .catch(errorFunction('Cannot get projects.'));
+  } catch (e) {
+    console.error(e.message);
+    process.exit(1);
+  }
   fs.readFile(__dirname + '/data/projects.js', 'utf-8', (error, data) => {
     errorFunction()(error);
     fs.writeFileSync(publicDir + '/projects.js', uglify.minify(data).code);
@@ -89,6 +94,33 @@ const publicDir = __dirname + '/public';
   });
 })();
 
+/**
+ * Gets project artifacts and constructs builds.json.
+ * @param {object} projects - Array of project overview objects returned by
+ *  Gitlab API.
+ * @param {string} lastDeployAt - ISO timestamp of last deployment, to check
+ *  where to pull the artifact from.
+ */
+async function projectSpecificTasks(projects, lastDeployAt) {
+  const artifactIds = [];
+  for (const project of projects) {
+    artifactIds.push((async () => {
+      if (await checkReleased(project)) return null;
+      return checkAndGetArtifact(project, lastDeployAt);
+    })());
+  }
+  const fetches = await Promise.all([
+    promiseAllNonNull(artifactIds),
+    fetchBadges(projects),
+    optimizeImages(projects),
+  ]);
+  await dumpFile({
+    artifacts: fetches[0],
+    badges: fetches[1],
+    webp: fetches[2],
+  });
+}
+
 const keyword = [
   '.NET Core',
   'Apache',
@@ -107,81 +139,90 @@ const keyword = [
   'XML',
 ];
 
-let lastDeployAt = '';
-
-const buildsComplex = {
-  artifacts: [],
-  badges: {},
-  webp: {},
-};
-let projectsResponse;
-let pendingCount;
-
 /**
- * Composes a function that prints error message and end process if there is an
- * error occured.
+ * Composes a function that throws an error with message when called with a
+ * valid error.
  * @param {string|undefined} errorMessage - Optional message to be printed
  *  instead of the error.message property.
- * @return {function} A function that prints message and end process if errored.
+ * @return {function} A function that throws an error with the message.
  */
 function errorFunction(errorMessage) {
   return (error) => {
     if (!error) return;
     const message = errorMessage || error.message;
-    if (message) console.error(message);
-    process.exitCode = 1;
+    throw new Error(message);
   };
 }
 
-/** Called when all artifacts are fetched, fetches badges from README. */
-function fetchBadges() {
+/**
+ * Wait for an array of promises to resolve, and filter out nulls.
+ * @param {Promise<T|null>[]} promises - The array of promises
+ *  to be waited for.
+ * @return {Promise<T[]>} Promised array with nulls removed.
+ * @template T
+ */
+async function promiseAllNonNull(promises) {
+  return (await Promise.all(promises)).filter((value) => value !== null);
+}
+
+/**
+ * Called when all artifacts are fetched, fetches badges from README.
+ * @param {object} projects - Array of project overview objects returned by
+ *  Gitlab API.
+ * @return {Promise<object>} Project ID to badge keywords object.
+ */
+async function fetchBadges(projects) {
   console.log('Prefetching all badges.');
-  pendingCount = projectsResponse.length;
-  for (const project of projectsResponse) {
-    axios.get('https://gitlab.com/api/v4/projects/' + project.id +
+  const pendingBadgeFetches = [];
+  for (const project of projects) {
+    pendingBadgeFetches.push(axios.get(projectEndPoint + '/' + project.id +
         '/repository/files/README.md/raw?ref=master')
         .then((response) => {
           console.log(`Got badges for ${project.name}.`);
-          buildsComplex.badges[project.id] = keyword.filter((value) => {
+          return [project.id, keyword.filter((value) => {
             // ignore word that starts with '-' as it may be a command flag
             const langRegex = new RegExp(`(^|[^a-z-])${value}([^a-z]|$)`, 'i');
             return langRegex.test(response.data) && value !== project.name;
-          });
+          })];
         })
         .catch((error) => {
           console.log(`No README for ${project.name}.`);
-        })
-        .finally(() => {
-          if (--pendingCount === 0) optimizeImages();
-        });
+          return null;
+        }));
   }
+  return Object.fromEntries(await promiseAllNonNull(pendingBadgeFetches));
 }
 
-/** Called after fetching badges. Downloads, resizes, and saves WebP files. */
-function optimizeImages() {
+/**
+ * Downloads, resizes, and saves WebP files.
+ * @param {object} projects - Array of project overview objects returned by
+ *  Gitlab API.
+ * @return {Promise<object>} "projectId-imagePath" to hash object for
+ *  prefetched image lookup.
+*/
+async function optimizeImages(projects) {
   console.log('Prefetching and optimizing screenshots.');
-  pendingCount = projectsResponse.length;
   const hash = crypto.createHash('sha256');
-  for (const project of projectsResponse) {
-    axios.get('https://gitlab.com/api/v4/projects/' +
-        project.id + '/repository/tree')
+  const pendingProjectFetches = [];
+  for (const project of projects) {
+    pendingProjectFetches.push(axios.get(`${projectEndPoint}/` +
+        `${project.id}/repository/tree`)
         .then((response) => {
           const fileNames = response.data.map((x) => x.name).sort();
           const imagePaths = fileNames.filter((name) => {
             return /screenshot*/.test(name);
           });
-          pendingCount += imagePaths.length;
+          const pendingScreenshotFetches = [];
           for (const imagePath of imagePaths) {
-            axios({
+            pendingScreenshotFetches.push(axios({
               method: 'get',
-              url: 'https://gitlab.com/api/v4/projects/' + project.id +
+              url: projectEndPoint + '/' + project.id +
                   '/repository/files/' + imagePath + '/raw?ref=master',
               responseType: 'stream',
             })
                 .then(async (response) => {
                   const digest = hash.update(imagePath)
                       .copy().digest('hex').substring(0, 8);
-                  buildsComplex.webp[`${project.id}-${imagePath}`] = digest;
                   const webPPrefix = publicDir +
                       `/styles/webp/${project.id}-${digest}`;
                   const stream = response.data
@@ -196,35 +237,39 @@ function optimizeImages() {
                         .toFile(webPPrefix + '-card.webp');
                     console.log(`Converted screenshot ${digest} to card.`);
                   }
+                  return [`${project.id}-${imagePath}`, digest];
                 })
                 .catch(errorFunction('Failed to fetch screenshot for ' +
-                    `${project.name}.`))
-                .finally(() => {
-                  if (--pendingCount === 0) dumpFile();
-                });
+                    `${project.name}.`)));
           }
+          return Promise.all(pendingScreenshotFetches);
         })
-        .catch(errorFunction(`Failed to get tree for ${project.name}.`))
-        .finally(() => {
-          if (--pendingCount === 0) dumpFile();
-        });
+        .catch(errorFunction(`Failed to get tree for ${project.name}.`)));
   }
-}
-
-/** Flushes all results to builds.json. **/
-function dumpFile() {
-  console.log('Dumping results to file.');
-  fs.writeFileSync(publicDir + '/builds.json', JSON.stringify(buildsComplex));
+  return Object.fromEntries((await Promise.all(pendingProjectFetches)).flat());
 }
 
 /**
- * Downloads artifact zip and fetch badges if there is no more pending project.
+ * Dump object to builds.json.
+ * @param {object} dumpObj - The object to be converted to JSON string and
+ *  dump to builds.json.
+ */
+async function dumpFile(dumpObj) {
+  console.log('Dumping results to file.');
+  await fs.promises.writeFile(publicDir + '/builds.json',
+      JSON.stringify(dumpObj));
+}
+
+/**
+ * Downloads artifact zip.
  * @param {string} zipUrl - URL to downoad zip from.
  * @param {string} type - The artifact type name for logging.
  * @param {object} project - Project object for extracting name and id.
+ * @return {Promise<number|null>} The project ID if an artifact is got,
+ *  null otherwise (no artifact in pipeline).
  */
-function downloadArtifact(zipUrl, type, project) {
-  axios({
+async function downloadArtifact(zipUrl, type, project) {
+  return axios({
     method: 'get',
     url: zipUrl,
     responseType: 'stream',
@@ -233,13 +278,11 @@ function downloadArtifact(zipUrl, type, project) {
         response.data.pipe(fs.createWriteStream(publicDir + '/' +
             project.id + '.zip'));
         console.log(`Got ${type} artifact for ${project.name}.`);
-        buildsComplex.artifacts.push(project.id);
+        return project.id;
       })
       .catch((error) => {
         console.log(`No ${type} artifact for ${project.name}.`);
-      })
-      .finally(() => {
-        if (--pendingCount === 0) fetchBadges();
+        return null;
       });
 }
 
@@ -247,72 +290,76 @@ function downloadArtifact(zipUrl, type, project) {
  * Checks for artifact in a successful master pipeline, update
  * builds.json and stores artifact.
  * @param {object} project - Project overview object returned by Gitlab API.
+ * @param {string} lastDeployAt - ISO timestamp of last deployment, to check
+ *  where to pull the artifact from.
+ * @return {Promise<number|null>} The project ID if an artifact is got,
+ *  null otherwise (no artifact in pipeline / no pipeline).
  */
-function checkArtifact(project) {
-  axios.get(`https://gitlab.com/api/v4/projects/${project.id}/pipelines`)
+async function checkAndGetArtifact(project, lastDeployAt) {
+  return axios.get(`${projectEndPoint}/${project.id}/pipelines`)
       .then((response) => {
         const masterPipelines = response.data.filter((pipeline) => {
           return pipeline.ref === 'master' && pipeline.status === 'success';
         });
         if (masterPipelines.length === 0) {
           console.log(`No pipelines found for ${project.name}, skipping.`);
-          if (--pendingCount === 0) fetchBadges();
-          return;
+          return null;
         }
         if (masterPipelines[0].updated_at < lastDeployAt) {
-          downloadArtifact(`https://wylieyyyy.gitlab.io/${project.id}.zip`,
-              'hosted', project);
+          return downloadArtifact('https://wylieyyyy.gitlab.io/' +
+              `${project.id}.zip`, 'hosted', project);
         } else {
-          downloadArtifact(`${project.web_url}/-/jobs/artifacts/master/` +
-            'download?job=build', 'build', project);
+          return downloadArtifact(`${project.web_url}/-/jobs/` +
+            'artifacts/master/download?job=build', 'build', project);
         }
       })
       .catch(errorFunction(`Cannot get pipeline for ${project.name}.`));
 }
 
 /**
- * Checks whether any releases has been published, if not, use checkArtifact to
- * built version from pipeline.
+ * Checks whether any releases has been published for the project.
  * @param {object} project - Project overview object returned by Gitlab API.
+ * @return {Promise<boolean>} Whether the project has releases.
  */
-function checkReleased(project) {
-  axios.get(`https://gitlab.com/api/v4/projects/${project.id}/releases`)
+async function checkReleased(project) {
+  return axios.get(`${projectEndPoint}/${project.id}/releases`)
       .then((response) => {
-        if (response.data.length === 0) checkArtifact(project);
+        if (response.data.length === 0) return false;
         else {
           console.log(project.name + ' has releases, skipping.');
-          if (--pendingCount === 0) fetchBadges();
+          return true;
         }
       })
       .catch(errorFunction(`Cannot get release for ${project.name}.`));
 }
 
 /**
- * Checks when was the last deployment. And sets lastDeployAt to that time.
- * @param {object} projects - Array of projects overview object returned by
- *     Gitlab API.
+ * Get the last deployment time as ISO timestamp.
+ * @param {object} projects - Array of project overview objects returned by
+ *  Gitlab API.
+ * @return {Promise<string>} The ISO timestamp of the last deployment
+ *  time if exists, empty string otherwise.
  */
-function checkLastDeployTime(projects) {
+async function getLastDeployTime(projects) {
   const project = projects.find((project) => {
     return project.path === 'wylieyyyy.gitlab.io';
   });
   if (project === undefined) {
     console.log('No prior deployment, starting from scratch.');
-    for (const project of projects) checkReleased(project);
-    return;
+    return '';
   }
-  axios.get(`https://gitlab.com/api/v4/projects/${project.id}/pipelines`)
-      .then((response) => {
+  return axios.get(`${projectEndPoint}/${project.id}/pipelines`)
+      .then(async (response) => {
         const masterPipelines = response.data.filter((pipeline) => {
           return pipeline.ref === 'master' && pipeline.status === 'success';
         });
         if (masterPipelines.length === 0) {
           console.log('No prior successful deployment, starting from scratch.');
-        } else {
-          lastDeployAt = masterPipelines[0].updated_at;
-          console.log(`Last deployment was at ${lastDeployAt}.`);
+          return '';
         }
-        for (const project of projects) checkReleased(project);
+        const lastDeployAt = masterPipelines[0].updated_at;
+        console.log(`Last deployment was at ${lastDeployAt}.`);
+        return lastDeployAt;
       })
       .catch(errorFunction('Cannot get deployment pipelines.'));
 }
@@ -337,9 +384,13 @@ function parseBlogPosts() {
       return '';
     },
   }).use(require('markdown-it-imsize'));
+  const fenceDefaultRule = parser.renderer.rules['fence'];
+  parser.renderer.rules['fence'] = (...ruleArguments) => {
+    const htmlFence = fenceDefaultRule(...ruleArguments);
+    return '<pre style="overflow-x: auto;"' + htmlFence.slice(4);
+  };
   parser.renderer.rules['heading_open'] = (tokens, idx, options, env, slf) => {
-    const token = tokens[idx];
-    if (idx == 0 && token.tag === 'h1') {
+    if (idx == 0 && tokens[idx].tag === 'h1') {
       inTitleHeading = true;
       tokens[idx + 1].type = 'io.gitlab.wylieyyyy.post_title';
       return '';
