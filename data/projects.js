@@ -287,7 +287,7 @@ const vm = new Vue({
      * @param {object} project - Project overview object returned by Gitlab API.
      */
     function showHashProjectDetail(vm, project) {
-      if (project.path === window.location.hash.substr(1) &&
+      if (project.path === window.location.hash.substring(1) &&
           vm.readMe[project.id]) {
         vm.showDetailModal(project.id);
       }
