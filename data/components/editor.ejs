@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+  <head>
+    <title>Code Viewer</title>
+    <%- include('../components/default-head'); -%>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.1/styles/stackoverflow-dark.min.css">
+  </head>
+  <body class="d-flex flex-column-reverse">
+    <footer role="toolbar" class="d-flex justify-content-between align-items-center text-light bg-dark px-3">
+      <h1 class="h6" style="display: inline;"><%= filepath %></h1>
+      <a href="<%= filepath.split('/').pop() %>" class="btn btn-success my-2" download>Download</a>
+    </footer>
+    <main style="flex-grow: 1; background-color: #222; overflow-y: scroll;">
+      <pre><code><%- content -%></code></pre>
+    </main>
+  </body>
+</html>

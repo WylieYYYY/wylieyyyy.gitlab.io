@@ -3,6 +3,7 @@
   <head>
     <title>WylieYYYY's Projects</title>
     <%- include('../components/default-head'); -%>
+    <script src="showonjs.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/vue@2" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js" defer></script>
     <script src="projects.js" defer></script>
@@ -27,15 +28,17 @@
     <%- include('../components/nav'); -%>
     <main id="app">
       <div style="position: absolute; width: 100%;">
-        <div v-for="error in errors" v-show="true"
-            class="alert alert-danger alert-dismissible container custom-alert"
-            style="display: none;" role="alert">
-          {{error}}
-          <button @click="errors.splice(errors.indexOf(error), 1)" type="button" class="close"
-              style="float: right;" data-dismiss="alert" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
-        </div>
+        <script type="text/x-template" class="show-on-js">
+          <div v-for="error in errors" v-show="true"
+              class="alert alert-danger alert-dismissible container custom-alert"
+              style="display: none;" role="alert">
+            {{error}}
+            <button @click="errors.splice(errors.indexOf(error), 1)" type="button" class="close"
+                style="float: right;" data-dismiss="alert" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+        </script>
       </div>
       <div class="jumbotron text-light bg-dark m-3">
         <h1 class="display-4">Projects</h1>
@@ -45,65 +48,67 @@
         </p>
       </div>
       <div class="text-light d-flex flex-wrap justify-content-around">
-        <div v-for="project in response" :key="project.name" class="card m-3"
+        <script type="text/x-template" class="show-on-js">
+          <div v-for="project in response" :key="project.name" class="card m-3"
             style="display: none;" :style="'width: 20rem; height: 35rem; display: flex;'">
-          <img v-if="screenshot[project.id]" class="card-img-top bg-dark"
-              :src="screenshot[project.id]" :alt="project.name + '\'s Screenshot'"
-              :title="project.name + '\'s Screenshot'"
-              style="width: calc(20rem - 2px); height: 15rem; object-fit: cover;"/>
-          <transition name="fade">
-            <div v-if="!screenshot[project.id]"
-                class="bg-dark d-flex justify-content-center align-items-center"
-                style="width: 100%; height: 15rem; position: absolute;">
-              <div class="spinner-border text-primary bg-dark" role="status">
-                <span class="sr-only">Loading...</span>
+            <img v-if="screenshot[project.id]" class="card-img-top bg-dark"
+                :src="screenshot[project.id]" :alt="project.name + '\'s Screenshot'"
+                :title="project.name + '\'s Screenshot'"
+                style="width: calc(20rem - 2px); height: 15rem; object-fit: cover;"/>
+            <transition name="fade">
+              <div v-if="!screenshot[project.id]"
+                  class="bg-dark d-flex justify-content-center align-items-center"
+                  style="width: 100%; height: 15rem; position: absolute;">
+                <div class="spinner-border text-primary bg-dark" role="status">
+                  <span class="sr-only">Loading...</span>
+                </div>
               </div>
-            </div>
-          </transition>
-          <div class="card-body bg-dark">
-            <h2 class="card-title">
-              <a :href="project.http_url_to_repo">
-                {{project.name}} <img src="styles/repo.svg" alt="" style="width: 1rem; height: 1rem;"/>
-              </a>
-            </h2>
-            <h3 title="Version" class="h4" style="display: inline;">{{version[project.id]}}</h3>
-            <a :href="projectHasDemo[project.id] ? project.path : '#'"
-                @click="projectHasDemo[project.id] ? '' : event.preventDefault()">
-                <img :src="'https://img.shields.io/badge/demo-' + (projectHasDemo[project.id] ?
-                  'click_here-005a8f' : 'none_yet-333')"
-                  width="100" height="20" style="float: right;"
-                  :alt="'Demo link ' + (projectHasDemo[project.id] ? '' : 'un') + 'available'"/>
-            </a>
-            <div>
-              <span v-for="name in badges[project.id]" class="badge mr-2 text-light"
-                  :style="badgeStyles[name]">
-                {{removeAllCaps(name)}}
-              </span>
-            </div>
-            <p class="card-text">{{project.description || 'No description available.'}}</p>
-            <button v-if="readMe[project.id]" @click="showDetailModal(project.id)" class="btn btn-primary"
-                type="button" style="position: absolute; bottom: 1rem; left: 1rem;" aria-haspopup="true"
-                aria-expanded="false">
-              Learn more
-            </button>
-            <ul v-if="license[project.id] && latestCreated[project.id]" class="list-group"
-                style="position: absolute; bottom: 1rem; right: 1rem;">
-              <li title="Project License"
-                  class="d-flex align-items-center list-group-item bg-dark border-info p-1">
-                <img src="styles/law.svg" alt="" style="width: 1rem; height: 1rem;"/>&nbsp;
-                <a @click.prevent="showLicenseModal(project.id)" href="#" aria-haspopup="true"
-                    aria-expanded="false">
-                  {{license[project.id]}}
+            </transition>
+            <div class="card-body bg-dark">
+              <h2 class="card-title">
+                <a :href="project.http_url_to_repo">
+                  {{project.name}} <img src="styles/repo.svg" alt="" style="width: 1rem; height: 1rem;"/>
                 </a>
-              </li>
-              <li title="Latest Release On"
-                  class="d-flex align-items-center list-group-item bg-dark border-info p-1">
-                <img src="styles/history.svg" alt="" style="width: 1rem; height: 1rem;"/>
-                &nbsp;{{latestCreated[project.id].substring(0, 10)}}
-              </li>
-            </ul>
+              </h2>
+              <h3 title="Version" class="h4" style="display: inline;">{{version[project.id]}}</h3>
+              <a :href="projectHasDemo[project.id] ? project.path : '#'"
+                  @click="projectHasDemo[project.id] ? '' : event.preventDefault()">
+                  <img :src="'https://img.shields.io/badge/demo-' + (projectHasDemo[project.id] ?
+                    'click_here-005a8f' : 'none_yet-333')"
+                    width="100" height="20" style="float: right;"
+                    :alt="'Demo link ' + (projectHasDemo[project.id] ? '' : 'un') + 'available'"/>
+              </a>
+              <div>
+                <span v-for="name in badges[project.id]" class="badge mr-2 text-light"
+                    :style="badgeStyles[name]">
+                  {{removeAllCaps(name)}}
+                </span>
+              </div>
+              <p class="card-text">{{project.description || 'No description available.'}}</p>
+              <button v-if="readMe[project.id]" @click="showDetailModal(project.id)" class="btn btn-primary"
+                  type="button" style="position: absolute; bottom: 1rem; left: 1rem;" aria-haspopup="true"
+                  aria-expanded="false">
+                Learn more
+              </button>
+              <ul v-if="license[project.id] && latestCreated[project.id]" class="list-group"
+                  style="position: absolute; bottom: 1rem; right: 1rem;">
+                <li title="Project License"
+                    class="d-flex align-items-center list-group-item bg-dark border-info p-1">
+                  <img src="styles/law.svg" alt="" style="width: 1rem; height: 1rem;"/>&nbsp;
+                  <a @click.prevent="showLicenseModal(project.id)" href="#" aria-haspopup="true"
+                      aria-expanded="false">
+                    {{license[project.id]}}
+                  </a>
+                </li>
+                <li title="Latest Release On"
+                    class="d-flex align-items-center list-group-item bg-dark border-info p-1">
+                  <img src="styles/history.svg" alt="" style="width: 1rem; height: 1rem;"/>
+                  &nbsp;{{latestCreated[project.id].substring(0, 10)}}
+                </li>
+              </ul>
+            </div>
           </div>
-        </div>
+        </script>
         <div v-show="modal.title !== null" class="modal-backdrop" style="opacity: 0.5;"></div>
         <div v-show="modal.title !== null" @click="dropDownTrigger = !dropDownTrigger"
             class="modal" tabindex="-1" role="dialog"
@@ -111,25 +116,31 @@
           <div class="modal-dialog modal-dialog-scrollable" :style="'height: calc(100% - 1rem);'">
             <div class="modal-content bg-dark">
               <div class="modal-header">
-                <h5 id="modaltitle" class="modal-title" v-show="modal.title" style="display: none;">
-                  {{modal.title}}
-                </h5>
-                <h5 v-if="false" class="modal-title">Unsupported Browser</h5>
-                <button @click="hideModal()" type="button"
-                    class="close text-light" aria-label="Close" v-show="true"
-                    style="display: none;" aria-hidden="true">
-                  &times;
-                </button>
+                <script type="text/x-template" class="show-on-js">
+                  <h1 id="modaltitle" class="modal-title h5" v-show="modal.title" style="display: none;">
+                    {{modal.title}}
+                  </h1>
+                </script>
+                <h1 v-if="false" class="modal-title h5">Unsupported Browser</h1>
+                <script type="text/x-template" class="show-on-js">
+                  <button @click="hideModal()" type="button"
+                      class="close text-light" aria-label="Close" v-show="true"
+                      style="display: none;" aria-hidden="true">
+                    &times;
+                  </button>
+                </script>
               </div>
               <div class="modal-body" @scroll="dropDownTrigger = !dropDownTrigger"
                   :style="modal.body === null ? 'overflow: hidden;' : ''">
                 <p v-html="modal.body"></p>
-                <div v-show="modal.body === null" class="justify-content-center align-items-center"
-                    style="display: none;" :style="'width: 100%; height: 100%; display: flex;'">
-                  <div class="spinner-border text-primary" role="status">
-                    <span class="sr-only">Loading...</span>
+                <script type="text/x-template" class="show-on-js">
+                  <div v-show="modal.body === null" class="justify-content-center align-items-center"
+                  style="display: none;" :style="'width: 100%; height: 100%; display: flex;'">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="sr-only">Loading...</span>
+                    </div>
                   </div>
-                </div>
+                </script>
                 <p v-if="false">
                   You are using a legacy browser or Javascript is disabled. Please
                   upgrade your browser or enable Javascript to proceed. You can also
@@ -144,12 +155,14 @@
                     :close-trigger="dropDownTrigger">
                 </drop-menu>
                 <a href="https://gitlab.com/users/WylieYYYY/projects" v-if="false">
-                  View in my repository <img src="styles/link-external.svg"/>
+                  View in my repository <img src="styles/link-external.svg" alt="(external)"/>
                 </a>
-                <button @click="hideModal()" type="button"
-                    class="btn btn-secondary" v-show="true" style="display: none;">
-                  Close
-                </button>
+                <script type="text/x-template" class="show-on-js">
+                  <button @click="hideModal()" type="button"
+                      class="btn btn-secondary" v-show="true" style="display: none;">
+                    Close
+                  </button>
+                </script>
                 <a href="." class="btn btn-warning" v-if="false">Return to home page</a>
               </div>
             </div>
