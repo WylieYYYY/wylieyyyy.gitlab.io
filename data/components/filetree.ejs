@@ -1,0 +1,35 @@
+<%
+  function groupBy(objects, lambda) {
+    const map = {};
+    for (const member of objects) {
+      map[lambda(member)] = map[lambda(member)] || [];
+      map[lambda(member)].push(member);
+    }
+    return map;
+  }
+  const children = groupBy(tree.children, (child) => child.type);
+%>
+<details <%= tree.expanded ? 'open=""' : '' %>>
+  <summary><%= tree.name %></summary>
+  <ul>
+    <% for (const dir of children.directory || []) { -%>
+      <li>
+        <%- include('filetree.ejs', {
+          tree: dir, prefixLength: prefixLength
+        }); -%>
+      </li>
+    <% } -%>
+    <%
+      for (const file of children.file || []) {
+        const trimmedPath = file.path.substring(prefixLength || 0);
+    -%>
+      <li>
+        <img src="../styles/fileicon/<%= file.name.split('.').pop() %>.svg"
+            alt="" style="width: 1rem; height: 1rem;"/>
+        <a href="<%= trimmedPath %>.html" onclick="<%= onclick(trimmedPath) %>">
+          <%= file.name %>
+        </a>
+      </li>
+    <% } -%>
+  </ul>
+</details>

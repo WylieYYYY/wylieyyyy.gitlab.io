@@ -1,7 +1,7 @@
 node_modules
 package-lock.json
 public/*
-!public/*/
+!public/styles/
 !public/index.html
 !public/robots.txt
 public/styles/styles.css

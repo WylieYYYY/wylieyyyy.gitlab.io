@@ -3,6 +3,7 @@
 const axios = require('axios');
 const CleanCSS = require('clean-css');
 const crypto = require('crypto');
+const dirTree = require('directory-tree');
 const ejs = require('ejs');
 const fs = require('fs');
 const glob = require('glob');
@@ -16,6 +17,23 @@ const uglify = require('uglify-js');
 
 const publicDir = __dirname + '/public';
 const projectEndPoint = 'https://gitlab.com/api/v4/projects';
+const htmlMinifyConfig = {
+  removeComments: true,
+  removeCommentsFromCDATA: true,
+  removeCDATASectionsFromCDATA: true,
+  collapseWhitespace: true,
+  collapseBooleanAttributes: true,
+  removeAttributeQuotes: true,
+  removeRedundantAttributes: true,
+  useShortDoctype: true,
+  removeEmptyAttributes: true,
+  removeEmptyElements: false,
+  removeOptionalTags: true,
+  removeScriptTypeAttributes: true,
+  removeStyleLinkTypeAttributes: true,
+  minifyJS: true,
+  minifyCSS: true,
+};
 
 (async function main() {
   try {
@@ -31,16 +49,49 @@ const projectEndPoint = 'https://gitlab.com/api/v4/projects';
     console.error(e.message);
     process.exit(1);
   }
-  fs.readFile(__dirname + '/data/projects.js', 'utf-8', (error, data) => {
-    errorFunction()(error);
-    fs.writeFileSync(publicDir + '/projects.js', uglify.minify(data).code);
-    console.log('Processed projects.js.');
-  });
-  glob(__dirname + '/data/pages/*.html.ejs', (error, matches) => {
+  const codedumpPath = __dirname + '/data/pages/codedump/';
+  glob(codedumpPath + '**/*', (error, matches) => {
     errorFunction()(error);
     for (const filepath of matches) {
-      const htmlName = filepath
-          .slice(__dirname.length + 6, -4).split('/').pop();
+      if (fs.statSync(filepath).isDirectory()) continue;
+      const filename = filepath.slice(codedumpPath.length);
+      const dirpath = filename.slice(0, -filename.split('/').pop().length);
+      if (!fs.existsSync(`${publicDir}/codedump/${dirpath}`)) {
+        fs.mkdirSync(`${publicDir}/codedump/${dirpath}`, {recursive: true});
+      }
+      fs.copyFileSync(filepath, `${publicDir}/codedump/${filename}`);
+      fs.readFile(filepath, 'utf-8', (error, data) => {
+        errorFunction()(error);
+        const lang = filepath.split('/').pop().split('.')[1];
+        const args = {
+          filepath: filename,
+          content: hljs.highlight(data, {language: lang}).value,
+        };
+        const editorTemplatePath = __dirname + '/data/components/editor.ejs';
+        ejs.renderFile(editorTemplatePath, args, (error, html) => {
+          errorFunction()(error);
+          fs.writeFileSync(`${publicDir}/codedump/${filename}.html`,
+              htmlMinify(html, htmlMinifyConfig));
+          console.log(`Processed ${filename} from CodeDump.`);
+        });
+      });
+    }
+  });
+  glob(__dirname + '/data/pages/**/*.js', (error, matches) => {
+    errorFunction()(error);
+    for (const filepath of matches) {
+      fs.readFile(filepath, 'utf-8', (error, data) => {
+        errorFunction()(error);
+        const filename = filepath.slice(__dirname.length + 12);
+        fs.writeFileSync(`${publicDir}/${filename}`, uglify.minify(data).code);
+        console.log(`Processed ${filename}.`);
+      });
+    }
+  });
+  glob(__dirname + '/data/pages/**/*.html.ejs', (error, matches) => {
+    errorFunction()(error);
+    for (const filepath of matches) {
+      const htmlName = filepath.slice(__dirname.length + 12, -4);
       const args = {current: htmlName};
       switch (htmlName) {
         case 'blog.html':
@@ -50,28 +101,20 @@ const projectEndPoint = 'https://gitlab.com/api/v4/projects';
           args['content'] = parseMarkdownFile(__dirname +
             '/data/pages/demoinfo.md');
           break;
+        case 'codedump/index.html':
+          args['tree'] = dirTree(codedumpPath, {
+            attributes: ['extension', 'type'],
+          });
+          args['tree']['expanded'] = true;
+          args['prefixLength'] = codedumpPath.length;
+          break;
         default:
           break;
       }
       ejs.renderFile(filepath, args, (error, html) => {
         errorFunction()(error);
-        fs.writeFileSync(`${publicDir}/${htmlName}`, htmlMinify(html, {
-          removeComments: true,
-          removeCommentsFromCDATA: true,
-          removeCDATASectionsFromCDATA: true,
-          collapseWhitespace: true,
-          collapseBooleanAttributes: true,
-          removeAttributeQuotes: true,
-          removeRedundantAttributes: true,
-          useShortDoctype: true,
-          removeEmptyAttributes: true,
-          removeEmptyElements: false,
-          removeOptionalTags: true,
-          removeScriptTypeAttributes: true,
-          removeStyleLinkTypeAttributes: true,
-          minifyJS: true,
-          minifyCSS: true,
-        }));
+        fs.writeFileSync(`${publicDir}/${htmlName}`,
+            htmlMinify(html, htmlMinifyConfig));
         console.log(`Processed EJS for ${htmlName}.`);
       });
     }

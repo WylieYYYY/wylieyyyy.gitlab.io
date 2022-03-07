@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+
+
+<!--
+  Welcome to CodeDump
+  ===================
+
+  This is where programs and scriplets that I made on a whim live.
+  Select a file from the menu to get started,
+  preview will come up here if Javascript is enabled.
+  If Javascript is disabled, do not panic, you will be redirected to the viewer.
+-->
+
+
+<html lang="zh-Hant">
+  <head>
+    <title>CodeDump</title>
+    <%- include('../../components/default-head'); -%>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.1/styles/stackoverflow-dark.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js" defer></script>
+    <script>
+      'use strict';
+      async function updatePreview(filepath) {
+        const preview = document.getElementById('editor');
+        preview.src = filepath;
+        preview.scrollTo(0, 0);
+      }
+    </script>
+  </head>
+  <body>
+    <%- include('../../components/nav'); -%>
+    <main class="d-flex flex-row-reverse" style="overflow: hidden;">
+      <iframe id="editor" src="index.html.ejs.html" style="width: 80%;"></iframe>
+      <aside class="text-light bg-dark pr-4" style="flex-grow: 1; flex-shrink: 0;">
+        <h1 class="h4 d-flex justify-content-center align-items-center">Contents</h1>
+        <hr/>
+        <nav class="ml-3" style="font-family: monospace;">
+          <%- include('../../components/filetree', {
+            tree: tree, prefixLength: prefixLength,
+            onclick: (path) => `event.preventDefault();updatePreview('${path}.html');`
+          }) -%>
+        </nav>
+      </aside>
+    </main>
+    <%- include('../../components/footer'); -%>
+  </body>
+</html>
