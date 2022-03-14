@@ -10,8 +10,8 @@
       <h1 class="h6" style="display: inline;"><%= filepath %></h1>
       <a href="<%= filepath.split('/').pop() %>" class="btn btn-success my-2" download>Download</a>
     </footer>
-    <main style="flex-grow: 1; background-color: #222; overflow-y: scroll;">
-      <pre><code><%- content -%></code></pre>
+    <main style="flex-grow: 1; background-color: #222; overflow: scroll;">
+      <pre style="overflow: visible;"><code><%- content -%></code></pre>
     </main>
   </body>
 </html>
