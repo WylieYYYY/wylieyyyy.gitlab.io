@@ -7,11 +7,19 @@
   </head>
   <body class="d-flex flex-column-reverse">
     <footer role="toolbar" class="d-flex justify-content-between align-items-center text-light bg-dark px-3">
-      <h1 class="h6" style="display: inline;"><%= filepath %></h1>
+      <div>
+        <h1 class="h6" style="display: inline;"><%= filepath %></h1>
+        <span class="mx-1" style="border-right: solid #222 1px;"></span>
+        <% if (filepath.endsWith('.html.ejs')) { %>
+          <a href="<%= filepath.slice(0, -4) %>">
+            <img src="https://img.shields.io/badge/demo-view_live-005a8f" alt="View demo live"/>
+          </a>
+        <% } %>
+      </div>
       <a href="<%= filepath.split('/').pop() %>" class="btn btn-success my-2" download>Download</a>
     </footer>
-    <main style="flex-grow: 1; background-color: #222; overflow-y: scroll;">
-      <pre><code><%- content -%></code></pre>
+    <main style="flex-grow: 1; background-color: #222; overflow: scroll;">
+      <pre style="overflow: visible;"><code><%- content -%></code></pre>
     </main>
   </body>
 </html>

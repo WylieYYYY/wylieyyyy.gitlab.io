@@ -74,9 +74,9 @@
               <a :href="projectHasDemo[project.id] ? project.path : '#'"
                   @click="projectHasDemo[project.id] ? '' : event.preventDefault()">
                   <img :src="'https://img.shields.io/badge/demo-' + (projectHasDemo[project.id] ?
-                    'click_here-005a8f' : 'none_yet-333')"
+                    'view_live-005a8f' : 'none_yet-333')"
                     width="100" height="20" style="float: right;"
-                    :alt="'Demo link ' + (projectHasDemo[project.id] ? '' : 'un') + 'available'"/>
+                    :alt="'Demo ' + (projectHasDemo[project.id] ? '' : 'un') + 'available'"/>
               </a>
               <div>
                 <span v-for="name in badges[project.id]" class="badge mr-2 text-light"
