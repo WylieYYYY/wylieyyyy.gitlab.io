@@ -36,6 +36,8 @@ const htmlMinifyConfig = {
 };
 
 (async function main() {
+  hljs.unregisterLanguage('markdown');
+  hljs.registerLanguage('markdown', require('./data/components/markdown.hljs'));
   try {
     await axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
         'order_by=path&sort=asc')

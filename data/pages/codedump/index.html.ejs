@@ -61,11 +61,20 @@
         <nav class="mt-3" style="font-family: monospace;">
           <%- include('../../components/filetree', {
             tree: tree, prefixLength: prefixLength,
-            onclick: (path) => `event.preventDefault();updatePreview('${path}.html');`
+            onclick: (path) => {
+              return `event.preventDefault();window.location.hash='';` +
+                  `updatePreview('${path}.html');`;
+            }
           }); -%>
         </nav>
       </aside>
     </main>
     <%- include('../../components/footer'); -%>
+    <script>
+      const match = window.location.hash.match(/^#path=([^&#]*)$/);
+      if (match !== null) {
+        updatePreview(window.location.origin + '/codedump/' + match[1] + '.html');
+      }
+    </script>
   </body>
 </html>

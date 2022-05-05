@@ -4,6 +4,12 @@
     <title>Code Viewer</title>
     <%- include('../components/default-head'); -%>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/10.7.1/styles/stackoverflow-dark.min.css">
+    <script>
+      if (!window.frameElement) {
+        window.location.href = window.location.origin +
+            '/codedump/#path=<%= filepath %>';
+      }
+    </script>
   </head>
   <body class="d-flex flex-column-reverse">
     <footer role="toolbar" class="d-flex justify-content-between align-items-center text-light bg-dark px-3">
