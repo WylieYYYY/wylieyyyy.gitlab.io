@@ -233,7 +233,7 @@ function markdown(hljs) {
   BOLD.contains = BOLD.contains.concat(CONTAINABLE);
   ITALIC.contains = ITALIC.contains.concat(CONTAINABLE);
 
-  CONTAINABLE = CONTAINABLE.concat(BOLD, INLINE_CODE, ITALIC);
+  CONTAINABLE = CONTAINABLE.concat(INLINE_CODE, BOLD, ITALIC);
 
   const HEADER = {
     className: 'section',
