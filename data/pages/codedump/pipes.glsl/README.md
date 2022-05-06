@@ -20,7 +20,7 @@ Tada!
 
 Fragment shader is not the optimal way to perform this task,
 but it can be run everywhere with online shader sharing platform with tweaking.
-Also, it is one of the easier ways to create aprocedurally generated
+Also, it is one of the easier ways to create a procedurally generated
 screensaver.
 
 ### General flow of execution

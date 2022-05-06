@@ -1,6 +1,6 @@
 /* Under MIT license, notice at the end of the corresponding markdown file. */
 
-// ES verions for the app
+// ES versions for the app
 #version 300 es
 precision highp float;
 // enable unit tests for packing and unpacking
@@ -22,8 +22,6 @@ float forwardChance = 0.85;
 // get the pixel value, pipeId is the type of pipe to render
 // uv is the space from 0.0 to 1.0 within one cell
 vec4 getPipePixel(ivec2 pipeId, vec2 uv, int paletteIdx) {
-	// if both components are 0, then we only need the background
-	if (pipeId.x == 0 && pipeId.y == 0) return vec4(0.0, 0.0, 0.0, 1.0);
 	vec4 color = getPalette()[paletteIdx];
 	// horizontal component rendering needed, check within line width
 	if (pipeId.x != 0 && abs(uv.y - 0.5) < 0.1) {
