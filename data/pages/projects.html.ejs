@@ -49,8 +49,8 @@
       </div>
       <div class="text-light d-flex flex-wrap justify-content-around">
         <script type="text/x-template" class="show-on-js">
-          <div v-for="project in response" :key="project.name" class="card m-3"
-            style="display: none;" :style="'width: 20rem; height: 35rem; display: flex;'">
+          <div v-for="project in response" :key="project.name" class="d-flex card m-3"
+              style="width: 20rem; height: 35rem;">
             <img v-if="screenshot[project.id]" class="card-img-top bg-dark"
                 :src="screenshot[project.id]" :alt="project.name + '\'s Screenshot'"
                 :title="project.name + '\'s Screenshot'"

@@ -36,6 +36,8 @@ const htmlMinifyConfig = {
 };
 
 (async function main() {
+  hljs.unregisterLanguage('markdown');
+  hljs.registerLanguage('markdown', require('./data/components/markdown.hljs'));
   try {
     await axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
         'order_by=path&sort=asc')
@@ -118,22 +120,29 @@ const htmlMinifyConfig = {
         console.log(`Processed EJS for ${htmlName}.`);
       });
     }
-    sass.render({
-      file: __dirname + '/data/styles.scss',
-    }, async (error, result) => {
-      errorFunction()(error);
-      const purgedCSS = await new PurgeCSS().purge({
-        content: ['data/**/*.ejs'],
-        css: [{raw: result.css}],
+  });
+  glob(__dirname + '/data/[^_]*.scss', async (error, matches) => {
+    errorFunction()(error);
+    for (const filepath of matches) {
+      const filename = filepath.slice(__dirname.length + 6);
+      const mainStylePurgeRules = {
+        content: [__dirname + '/data/**/*.ejs'],
         safelist: [/^dropdown-(toggle|menu|item)$/, 'btn-success'],
-      });
-      const minified = new CleanCSS({
-        level: {2: {all: true}},
-      }).minify(purgedCSS[0].css);
+      };
+      const compiled = (await new PurgeCSS().purge({
+        css: [{raw: sass.compile(filepath).css}],
+        variables: true,
+        ...(filename === 'styles.scss'? mainStylePurgeRules : {}),
+      }))[0].css;
+      const minified = new CleanCSS({level: {
+        ...(filename === 'styles.scss'? {} : {1: {specialComments: 0}}),
+        2: {all: true},
+      }}).minify(compiled);
       if (minified.errors.length > 0) errorFunction()(minified.errors[0]);
-      fs.writeFileSync(publicDir + '/styles/styles.css', minified.styles);
-      console.log('Processed SASS styles.');
-    });
+      fs.writeFileSync(`${publicDir}/styles/${filename.slice(0, -5)}.css`,
+          minified.styles);
+      console.log(`Processed SASS for ${filename}.`);
+    }
   });
 })();
 
