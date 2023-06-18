@@ -4,5 +4,6 @@ public/*
 !public/styles/
 !public/index.html
 !public/robots.txt
+public/styles/**/*.gz
 public/styles/*.css
 public/styles/webp/*.webp
