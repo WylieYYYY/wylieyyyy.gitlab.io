@@ -11,7 +11,7 @@
       }
     </script>
   </head>
-  <body class="d-flex flex-column-reverse">
+  <body class="d-flex flex-column-reverse" style="background-image: none;">
     <footer role="toolbar" class="d-flex justify-content-between align-items-center text-light bg-dark px-3">
       <div>
         <h1 class="h6" style="display: inline;"><%= filepath %></h1>
@@ -25,7 +25,7 @@
       <a href="<%= filepath.split('/').pop() %>" class="btn btn-success my-2" download>Download</a>
     </footer>
     <main style="flex-grow: 1; background-color: #222; overflow: scroll;">
-      <pre style="overflow: visible;"><code><%- content -%></code></pre>
+      <pre class="px-2 py-1" style="overflow: visible;"><code><%- content -%></code></pre>
     </main>
   </body>
 </html>
