@@ -1,4 +1,3 @@
-/* exported vm */
 /* global axios, Vue */
 'use strict';
 
