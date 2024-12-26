@@ -15,8 +15,11 @@ const sass = require('sass');
 const sharp = require('sharp');
 const uglify = require('uglify-js');
 
+const axiosInstance = axios.create({
+  baseURL: 'https://gitlab.com/api/v4/',
+  timeout: 10000,
+});
 const publicDir = __dirname + '/public';
-const projectEndPoint = 'https://gitlab.com/api/v4/projects';
 const htmlMinifyConfig = {
   removeComments: true,
   removeCommentsFromCDATA: true,
@@ -39,8 +42,7 @@ const htmlMinifyConfig = {
   hljs.unregisterLanguage('markdown');
   hljs.registerLanguage('markdown', require('./data/components/markdown.hljs'));
   try {
-    await axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
-        'order_by=path&sort=asc')
+    await axiosInstance.get('/users/wylieyyyy/projects?order_by=path&sort=asc')
         .then(async (response) => {
           keyword.push(...response.data.map((x) => x.name));
           const lastDeployAt = await getLastDeployTime(response.data);
@@ -48,7 +50,7 @@ const htmlMinifyConfig = {
         })
         .catch(errorFunction('Cannot get projects.'));
   } catch (error) {
-    console.error(error);
+    console.dir(error);
     process.exit(1);
   }
   const codedumpPath = __dirname + '/data/pages/codedump/';
@@ -203,8 +205,8 @@ const keyword = [
 function errorFunction(errorMessage) {
   return (error) => {
     if (!error) return;
-    const message = errorMessage || error.message;
-    throw new Error(message);
+    if (errorMessage) console.error(errorMessage);
+    throw error;
   };
 }
 
@@ -229,7 +231,7 @@ async function fetchBadges(projects) {
   console.log('Prefetching all badges.');
   const pendingBadgeFetches = [];
   for (const project of projects) {
-    pendingBadgeFetches.push(axios.get(projectEndPoint + '/' + project.id +
+    pendingBadgeFetches.push(axiosInstance.get('/projects/' + project.id +
         '/repository/files/README.md/raw?ref=master')
         .then((response) => {
           console.log(`Got badges for ${project.name}.`);
@@ -259,8 +261,7 @@ async function optimizeImages(projects) {
   const hash = crypto.createHash('sha256');
   const pendingProjectFetches = [];
   for (const project of projects) {
-    pendingProjectFetches.push(axios.get(`${projectEndPoint}/` +
-        `${project.id}/repository/tree`)
+    pendingProjectFetches.push(axiosInstance.get(`/projects/${project.id}/repository/tree`)
         .then((response) => {
           const fileNames = response.data.map((x) => x.name).sort();
           const imagePaths = fileNames.filter((name) => {
@@ -268,9 +269,9 @@ async function optimizeImages(projects) {
           });
           const pendingScreenshotFetches = [];
           for (const imagePath of imagePaths) {
-            pendingScreenshotFetches.push(axios({
+            pendingScreenshotFetches.push(axiosInstance.request({
               method: 'get',
-              url: projectEndPoint + '/' + project.id +
+              url: '/projects/' + project.id +
                   '/repository/files/' + imagePath + '/raw?ref=master',
               responseType: 'stream',
             })
@@ -350,7 +351,7 @@ async function downloadArtifact(zipUrl, type, project) {
  *  null otherwise (no artifact in pipeline / no pipeline).
  */
 async function checkAndGetArtifact(project, lastDeployAt) {
-  return axios.get(`${projectEndPoint}/${project.id}/pipelines`)
+  return axiosInstance.get(`/projects/${project.id}/pipelines`)
       .then((response) => {
         const masterPipelines = response.data.filter((pipeline) => {
           return pipeline.ref === 'master' && pipeline.status === 'success';
@@ -376,7 +377,7 @@ async function checkAndGetArtifact(project, lastDeployAt) {
  * @return {Promise<boolean>} Whether the project has releases.
  */
 async function checkReleased(project) {
-  return axios.get(`${projectEndPoint}/${project.id}/releases`)
+  return axiosInstance.get(`/projects/${project.id}/releases`)
       .then((response) => {
         if (response.data.length === 0) return false;
         else {
@@ -405,7 +406,7 @@ async function getLastDeployTime(projects) {
     console.log('No prior deployment, starting from scratch.');
     return '';
   }
-  return axios.get(`${projectEndPoint}/${project.id}/pipelines`)
+  return axiosInstance.get(`/projects/${project.id}/pipelines`)
       .then(async (response) => {
         const masterPipelines = response.data.filter((pipeline) => {
           return pipeline.ref === 'master' && pipeline.status === 'success';

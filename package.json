@@ -4,7 +4,7 @@
   "description": "Personal website.",
   "scripts": {
     "test": "node node_modules/eslint/bin/eslint.js *.js data/pages/*.js --ignore-pattern 'public/*'",
-    "build": "node setup.js"
+    "build": "node --no-network-family-autoselection setup.js"
   },
   "repository": {
     "type": "git",
