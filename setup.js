@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const dirTree = require('directory-tree');
 const ejs = require('ejs');
 const fs = require('fs');
-const glob = require('glob');
+const {glob, globSync} = require('glob');
 const hljs = require('highlight.js');
 const htmlMinify = require('html-minifier').minify;
 const md = require('markdown-it');
@@ -47,13 +47,12 @@ const htmlMinifyConfig = {
           projectSpecificTasks(response.data, lastDeployAt);
         })
         .catch(errorFunction('Cannot get projects.'));
-  } catch (e) {
-    console.error(e.message);
+  } catch (error) {
+    console.error(error);
     process.exit(1);
   }
   const codedumpPath = __dirname + '/data/pages/codedump/';
-  glob(codedumpPath + '**/*', (error, matches) => {
-    errorFunction()(error);
+  glob(codedumpPath + '**/*').then((matches) => {
     for (const filepath of matches) {
       if (fs.statSync(filepath).isDirectory()) continue;
       const filename = filepath.slice(codedumpPath.length);
@@ -79,8 +78,7 @@ const htmlMinifyConfig = {
       });
     }
   });
-  glob(__dirname + '/data/pages/**/*.js', (error, matches) => {
-    errorFunction()(error);
+  glob(__dirname + '/data/pages/**/*.js').then((matches) => {
     for (const filepath of matches) {
       fs.readFile(filepath, 'utf-8', (error, data) => {
         errorFunction()(error);
@@ -90,8 +88,7 @@ const htmlMinifyConfig = {
       });
     }
   });
-  glob(__dirname + '/data/pages/**/*.html.ejs', (error, matches) => {
-    errorFunction()(error);
+  glob(__dirname + '/data/pages/**/*.html.ejs').then((matches) => {
     for (const filepath of matches) {
       const htmlName = filepath.slice(__dirname.length + 12, -4);
       const args = {current: htmlName};
@@ -121,8 +118,7 @@ const htmlMinifyConfig = {
       });
     }
   });
-  glob(__dirname + '/data/[^_]*.scss', async (error, matches) => {
-    errorFunction()(error);
+  glob(__dirname + '/data/[^_]*.scss').then(async (matches) => {
     for (const filepath of matches) {
       const filename = filepath.slice(__dirname.length + 6);
       const mainStylePurgeRules = {
@@ -136,7 +132,7 @@ const htmlMinifyConfig = {
       }))[0].css;
       const minified = new CleanCSS({level: {
         ...(filename === 'styles.scss'? {} : {1: {specialComments: 0}}),
-        2: {all: true},
+        2: {all: true, removeUnusedAtRules: false},
       }}).minify(compiled);
       if (minified.errors.length > 0) errorFunction()(minified.errors[0]);
       fs.writeFileSync(`${publicDir}/styles/${filename.slice(0, -5)}.css`,
@@ -180,11 +176,17 @@ const keyword = [
   'C',
   'CSharp',
   'CSV',
+  'Extension',
+  'Firefox',
   'GTK',
+  'Home Manager',
+  'Impermanence',
   'JSON',
   'Legacy',
+  'Nix',
   'PHP',
   'Python',
+  'Rust',
   'Shell',
   'SQLite',
   'VTE',
@@ -382,7 +384,10 @@ async function checkReleased(project) {
           return true;
         }
       })
-      .catch(errorFunction(`Cannot get release for ${project.name}.`));
+      .catch((error) => {
+        console.warn(`Cannot get release for ${project.name}.`);
+        return new Promise((resolve, reject) => resolve(false));
+      });
 }
 
 /**
@@ -464,7 +469,7 @@ function parseBlogPosts() {
     return slf.renderToken(tokens, idx, options);
   };
   try {
-    const matches = glob.sync(__dirname + '/data/posts/*.md').sort().reverse();
+    const matches = globSync(__dirname + '/data/posts/*.md').sort().reverse();
     for (const filepath of matches) {
       postTitle = 'Untitled';
       const post = {
