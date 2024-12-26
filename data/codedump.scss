@@ -55,7 +55,7 @@ main > aside {
 
 label[for=collapse-btn] {
     @include pure.button-variant($darker, $darkest, $darker, $darkest);
-    @include pure.border-right-radius(0);
+    @include pure.border-end-radius(0);
     border-right: 0;
     width: 1.5rem;
     margin: 0;

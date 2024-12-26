@@ -1,4 +1,4 @@
-image: node:15-alpine
+image: node:22-alpine
 
 stages:
     - lint
@@ -8,13 +8,13 @@ stages:
 eslint:
     stage: lint
     script:
-        - npm i
+        - npm install
         - npm test
 
 build:
     stage: build
     script:
-        - npm i
+        - npm install
         - npm run build
         - find public -type f -regex '.*\.\(css\|html\|js\|json\|svg\)$' -exec gzip -k {} \;
     artifacts:

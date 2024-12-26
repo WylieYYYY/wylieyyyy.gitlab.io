@@ -6,7 +6,7 @@ const crypto = require('crypto');
 const dirTree = require('directory-tree');
 const ejs = require('ejs');
 const fs = require('fs');
-const glob = require('glob');
+const {glob, globSync} = require('glob');
 const hljs = require('highlight.js');
 const htmlMinify = require('html-minifier').minify;
 const md = require('markdown-it');
@@ -15,8 +15,11 @@ const sass = require('sass');
 const sharp = require('sharp');
 const uglify = require('uglify-js');
 
+const axiosInstance = axios.create({
+  baseURL: 'https://gitlab.com/api/v4/',
+  timeout: 10000,
+});
 const publicDir = __dirname + '/public';
-const projectEndPoint = 'https://gitlab.com/api/v4/projects';
 const htmlMinifyConfig = {
   removeComments: true,
   removeCommentsFromCDATA: true,
@@ -39,21 +42,19 @@ const htmlMinifyConfig = {
   hljs.unregisterLanguage('markdown');
   hljs.registerLanguage('markdown', require('./data/components/markdown.hljs'));
   try {
-    await axios.get('https://gitlab.com/api/v4/users/wylieyyyy/projects?' +
-        'order_by=path&sort=asc')
+    await axiosInstance.get('/users/wylieyyyy/projects?order_by=path&sort=asc')
         .then(async (response) => {
           keyword.push(...response.data.map((x) => x.name));
           const lastDeployAt = await getLastDeployTime(response.data);
           projectSpecificTasks(response.data, lastDeployAt);
         })
         .catch(errorFunction('Cannot get projects.'));
-  } catch (e) {
-    console.error(e.message);
+  } catch (error) {
+    console.dir(error);
     process.exit(1);
   }
   const codedumpPath = __dirname + '/data/pages/codedump/';
-  glob(codedumpPath + '**/*', (error, matches) => {
-    errorFunction()(error);
+  glob(codedumpPath + '**/*').then((matches) => {
     for (const filepath of matches) {
       if (fs.statSync(filepath).isDirectory()) continue;
       const filename = filepath.slice(codedumpPath.length);
@@ -79,8 +80,7 @@ const htmlMinifyConfig = {
       });
     }
   });
-  glob(__dirname + '/data/pages/**/*.js', (error, matches) => {
-    errorFunction()(error);
+  glob(__dirname + '/data/pages/**/*.js').then((matches) => {
     for (const filepath of matches) {
       fs.readFile(filepath, 'utf-8', (error, data) => {
         errorFunction()(error);
@@ -90,8 +90,7 @@ const htmlMinifyConfig = {
       });
     }
   });
-  glob(__dirname + '/data/pages/**/*.html.ejs', (error, matches) => {
-    errorFunction()(error);
+  glob(__dirname + '/data/pages/**/*.html.ejs').then((matches) => {
     for (const filepath of matches) {
       const htmlName = filepath.slice(__dirname.length + 12, -4);
       const args = {current: htmlName};
@@ -121,8 +120,7 @@ const htmlMinifyConfig = {
       });
     }
   });
-  glob(__dirname + '/data/[^_]*.scss', async (error, matches) => {
-    errorFunction()(error);
+  glob(__dirname + '/data/[^_]*.scss').then(async (matches) => {
     for (const filepath of matches) {
       const filename = filepath.slice(__dirname.length + 6);
       const mainStylePurgeRules = {
@@ -136,7 +134,7 @@ const htmlMinifyConfig = {
       }))[0].css;
       const minified = new CleanCSS({level: {
         ...(filename === 'styles.scss'? {} : {1: {specialComments: 0}}),
-        2: {all: true},
+        2: {all: true, removeUnusedAtRules: false},
       }}).minify(compiled);
       if (minified.errors.length > 0) errorFunction()(minified.errors[0]);
       fs.writeFileSync(`${publicDir}/styles/${filename.slice(0, -5)}.css`,
@@ -180,11 +178,17 @@ const keyword = [
   'C',
   'CSharp',
   'CSV',
+  'Extension',
+  'Firefox',
   'GTK',
+  'Home Manager',
+  'Impermanence',
   'JSON',
   'Legacy',
+  'Nix',
   'PHP',
   'Python',
+  'Rust',
   'Shell',
   'SQLite',
   'VTE',
@@ -201,8 +205,8 @@ const keyword = [
 function errorFunction(errorMessage) {
   return (error) => {
     if (!error) return;
-    const message = errorMessage || error.message;
-    throw new Error(message);
+    if (errorMessage) console.error(errorMessage);
+    throw error;
   };
 }
 
@@ -227,7 +231,7 @@ async function fetchBadges(projects) {
   console.log('Prefetching all badges.');
   const pendingBadgeFetches = [];
   for (const project of projects) {
-    pendingBadgeFetches.push(axios.get(projectEndPoint + '/' + project.id +
+    pendingBadgeFetches.push(axiosInstance.get('/projects/' + project.id +
         '/repository/files/README.md/raw?ref=master')
         .then((response) => {
           console.log(`Got badges for ${project.name}.`);
@@ -257,8 +261,7 @@ async function optimizeImages(projects) {
   const hash = crypto.createHash('sha256');
   const pendingProjectFetches = [];
   for (const project of projects) {
-    pendingProjectFetches.push(axios.get(`${projectEndPoint}/` +
-        `${project.id}/repository/tree`)
+    pendingProjectFetches.push(axiosInstance.get(`/projects/${project.id}/repository/tree`)
         .then((response) => {
           const fileNames = response.data.map((x) => x.name).sort();
           const imagePaths = fileNames.filter((name) => {
@@ -266,9 +269,9 @@ async function optimizeImages(projects) {
           });
           const pendingScreenshotFetches = [];
           for (const imagePath of imagePaths) {
-            pendingScreenshotFetches.push(axios({
+            pendingScreenshotFetches.push(axiosInstance.request({
               method: 'get',
-              url: projectEndPoint + '/' + project.id +
+              url: '/projects/' + project.id +
                   '/repository/files/' + imagePath + '/raw?ref=master',
               responseType: 'stream',
             })
@@ -348,7 +351,7 @@ async function downloadArtifact(zipUrl, type, project) {
  *  null otherwise (no artifact in pipeline / no pipeline).
  */
 async function checkAndGetArtifact(project, lastDeployAt) {
-  return axios.get(`${projectEndPoint}/${project.id}/pipelines`)
+  return axiosInstance.get(`/projects/${project.id}/pipelines`)
       .then((response) => {
         const masterPipelines = response.data.filter((pipeline) => {
           return pipeline.ref === 'master' && pipeline.status === 'success';
@@ -374,7 +377,7 @@ async function checkAndGetArtifact(project, lastDeployAt) {
  * @return {Promise<boolean>} Whether the project has releases.
  */
 async function checkReleased(project) {
-  return axios.get(`${projectEndPoint}/${project.id}/releases`)
+  return axiosInstance.get(`/projects/${project.id}/releases`)
       .then((response) => {
         if (response.data.length === 0) return false;
         else {
@@ -382,7 +385,10 @@ async function checkReleased(project) {
           return true;
         }
       })
-      .catch(errorFunction(`Cannot get release for ${project.name}.`));
+      .catch((error) => {
+        console.warn(`Cannot get release for ${project.name}.`);
+        return new Promise((resolve, reject) => resolve(false));
+      });
 }
 
 /**
@@ -400,7 +406,7 @@ async function getLastDeployTime(projects) {
     console.log('No prior deployment, starting from scratch.');
     return '';
   }
-  return axios.get(`${projectEndPoint}/${project.id}/pipelines`)
+  return axiosInstance.get(`/projects/${project.id}/pipelines`)
       .then(async (response) => {
         const masterPipelines = response.data.filter((pipeline) => {
           return pipeline.ref === 'master' && pipeline.status === 'success';
@@ -464,7 +470,7 @@ function parseBlogPosts() {
     return slf.renderToken(tokens, idx, options);
   };
   try {
-    const matches = glob.sync(__dirname + '/data/posts/*.md').sort().reverse();
+    const matches = globSync(__dirname + '/data/posts/*.md').sort().reverse();
     for (const filepath of matches) {
       postTitle = 'Untitled';
       const post = {
